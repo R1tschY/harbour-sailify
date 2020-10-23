@@ -1,4 +1,8 @@
 /target
+/RPMS
+/installroot
+/rpmbuildroot
+/.cargo*
 
 # IDEA
 /.idea

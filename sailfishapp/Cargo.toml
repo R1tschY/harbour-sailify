@@ -1,0 +1,13 @@
+[package]
+name = "sailfishapp"
+version = "0.1.0"
+authors = ["R1tschY <r1tschy@yahoo.de>"]
+edition = "2018"
+
+[build-dependencies]
+cpp_build = "0.5"
+pkg-config = "0.3"
+
+[dependencies]
+cpp = "0.5"
+qt5qml = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "1192b73e" }

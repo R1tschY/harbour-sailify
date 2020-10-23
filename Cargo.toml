@@ -1,5 +1,5 @@
 [package]
-name = "sailify"
+name = "harbour-sailify"
 version = "0.1.0"
 authors = ["Richard Liebscher <r1tschy@posteo.de>"]
 edition = "2018"
@@ -7,7 +7,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-librespot = "^0.1.3"
+# librespot
+librespot = { version = "^0.1.3", default-features = false, features = ["pulseaudio-backend"]}
 tokio-core = "0.1"
 tokio-io = "0.1"
 futures = "0.1"
@@ -16,4 +17,13 @@ sha-1 = "0.8"
 url = "1.7"
 hex = "0.3"
 tokio-signal = "0.2"
-env_logger =  {version = "0.6", default-features = false, features = ["termcolor","humantime","atty"]}
+env_logger =  { version = "0.6", default-features = false, features = ["termcolor","humantime","atty"]}
+
+# qt app
+qt5qml = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "1192b73e" }
+sailfishapp = { path = "sailfishapp" }
+
+[build-dependencies]
+qobject-compiler = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "1192b73e"}
+qt5qml = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "1192b73e"}
+pkg-config = "0.3"
