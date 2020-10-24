@@ -4,6 +4,8 @@
 /rpmbuildroot
 /.cargo*
 
+*.list
+
 # IDEA
 /.idea
 *.iml

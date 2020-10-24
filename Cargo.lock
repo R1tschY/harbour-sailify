@@ -473,26 +473,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
 
 [[package]]
-name = "harbour-sailify"
-version = "0.1.0"
-dependencies = [
- "env_logger",
- "futures",
- "hex",
- "librespot",
- "log 0.4.11",
- "pkg-config",
- "qobject-compiler",
- "qt5qml",
- "sailfishapp",
- "sha-1",
- "tokio-core",
- "tokio-io",
- "tokio-signal",
- "url",
-]
-
-[[package]]
 name = "hermit-abi"
 version = "0.1.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1477,6 +1457,25 @@ dependencies = [
  "cpp_build",
  "pkg-config",
  "qt5qml",
+]
+
+[[package]]
+name = "sailify"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "futures",
+ "hex",
+ "librespot",
+ "log 0.4.11",
+ "pkg-config",
+ "qobject-compiler",
+ "qt5qml",
+ "sailfishapp",
+ "sha-1",
+ "tokio-core",
+ "tokio-io",
+ "url",
 ]
 
 [[package]]

@@ -1,53 +1,40 @@
-use futures::sync::mpsc::UnboundedReceiver;
-use futures::{Async, Future, Poll, Stream};
-use log::{error, info, trace, warn};
-use sha1::{Digest, Sha1};
 use std::env;
 use std::io;
 use std::mem;
 use std::path::PathBuf;
+use std::thread;
+use std::thread::JoinHandle;
 use std::time::Instant;
-use tokio_core::reactor::{Core, Handle};
-use tokio_io::IoStream;
-use url::Url;
 
+use futures::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+use futures::{Async, Future, Poll, Stream};
+use librespot::connect::discovery::{discovery, DiscoveryStream};
+use librespot::connect::spirc::{Spirc, SpircTask};
 use librespot::core::authentication::{get_credentials, Credentials};
 use librespot::core::cache::Cache;
 use librespot::core::config::{ConnectConfig, DeviceType, SessionConfig, VolumeCtrl};
 use librespot::core::session::Session;
 use librespot::core::version;
-
-use librespot::connect::discovery::{discovery, DiscoveryStream};
-use librespot::connect::spirc::{Spirc, SpircTask};
 use librespot::playback::audio_backend::{self, Sink};
 use librespot::playback::config::{Bitrate, PlayerConfig};
 use librespot::playback::mixer::{self, Mixer, MixerConfig};
 use librespot::playback::player::{Player, PlayerEvent};
+use log::{error, info, trace, warn};
+use sha1::{Digest, Sha1};
+use tokio_core::reactor::{Core, Handle};
+use tokio_io::IoStream;
+use url::Url;
+
+pub mod qobject;
 
 fn device_id(name: &str) -> String {
     hex::encode(Sha1::digest(name.as_bytes()))
 }
 
-fn setup_logging(verbose: bool) {
-    let mut builder = env_logger::Builder::new();
-    match env::var("RUST_LOG") {
-        Ok(config) => {
-            builder.parse_filters(&config);
-            builder.init();
-
-            if verbose {
-                warn!("`--verbose` flag overidden by `RUST_LOG` environment variable");
-            }
-        }
-        Err(_) => {
-            if verbose {
-                builder.parse_filters("libmdns=info,librespot=trace");
-            } else {
-                builder.parse_filters("libmdns=info,librespot=info");
-            }
-            builder.init();
-        }
-    }
+#[derive(Clone, Debug)]
+pub enum ControlMessage {
+    Start(),
+    Shutdown,
 }
 
 #[derive(Clone)]
@@ -71,7 +58,6 @@ struct Options {
     cache: Option<PathBuf>,
     audio_cache: bool,
     device_name: String,
-    device_type: DeviceType,
     bitrate: Bitrate,
     username: String,
     password: String,
@@ -99,8 +85,7 @@ impl Options {
         Self {
             cache: None,
             audio_cache: true,
-            device_name: "".to_string(),
-            device_type: DeviceType::default(),
+            device_name: "Sailify".to_string(),
             bitrate: Bitrate::default(),
             username: "".to_string(),
             password: "".to_string(),
@@ -120,15 +105,12 @@ impl Options {
             normalisation_pregain: None,
             volume_ctrl: VolumeCtrl::default(),
             autoplay: false,
-            gapless: true
+            gapless: true,
         }
     }
 }
 
-
 fn setup() -> Setup {
-    setup_logging(true);
-
     info!(
         "sailify/{} librespot/{}",
         env!("CARGO_PKG_VERSION"),
@@ -151,10 +133,12 @@ fn setup() -> Setup {
     };
 
     let audio_cache: bool = opts.audio_cache;
-    let cache = opts.cache
+    let cache = opts
+        .cache
         .map(|cache_location| Cache::new(cache_location, audio_cache));
 
-    let initial_volume = opts.initial_volume
+    let initial_volume = opts
+        .initial_volume
         .map(|volume| {
             if volume > 100 {
                 panic!("Initial volume must be in the range 0-100");
@@ -164,78 +148,61 @@ fn setup() -> Setup {
         .or_else(|| cache.as_ref().and_then(Cache::volume))
         .unwrap_or(0x8000);
 
-    let credentials = {
-        let cached_credentials = cache.as_ref().and_then(Cache::credentials);
+    //let cached_credentials = cache.as_ref().and_then(Cache::credentials);
+    let credentials = Credentials::with_password(opts.username, opts.password);
 
-        let password = |_: &String| -> String {
-            panic!();
-        };
+    let session_config = SessionConfig {
+        user_agent: version::version_string(),
+        device_id: device_id(&opts.device_name),
+        proxy: opts.proxy.or(std::env::var("http_proxy").ok()).map(
+            |s| {
+                match Url::parse(&s) {
+                    Ok(url) => {
+                        if url.host().is_none() || url.port_or_known_default().is_none() {
+                            panic!("Invalid proxy url, only urls on the format \"http://host:port\" are allowed");
+                        }
 
-        get_credentials(
-            Some(opts.username),
-            Some(opts.password),
-            cached_credentials,
-            password,
-        )
+                        if url.scheme() != "http" {
+                            panic!("Only unsecure http:// proxies are supported");
+                        }
+                        url
+                    },
+                    Err(err) => panic!("Invalid proxy url: {}, only urls on the format \"http://host:port\" are allowed", err)
+                }
+            },
+        ),
+        ap_port: opts.ap_port,
     };
 
-    let session_config = {
-        let device_id = device_id(&opts.device_name);
-
-        SessionConfig {
-            user_agent: version::version_string(),
-            device_id: device_id,
-            proxy: opts.proxy.or(std::env::var("http_proxy").ok()).map(
-                |s| {
-                    match Url::parse(&s) {
-                        Ok(url) => {
-                            if url.host().is_none() || url.port_or_known_default().is_none() {
-                                panic!("Invalid proxy url, only urls on the format \"http://host:port\" are allowed");
-                            }
-
-                            if url.scheme() != "http" {
-                                panic!("Only unsecure http:// proxies are supported");
-                            }
-                            url
-                        },
-                        Err(err) => panic!("Invalid proxy url: {}, only urls on the format \"http://host:port\" are allowed", err)
-                    }
-                },
-            ),
-            ap_port: opts.ap_port,
-        }
-    };
-
-    let player_config = {
-        PlayerConfig {
-            bitrate: opts.bitrate,
-            gapless: opts.gapless,
-            normalisation: opts.volume_normalisation,
-            normalisation_pregain: opts.normalisation_pregain
-                .unwrap_or(PlayerConfig::default().normalisation_pregain),
-        }
+    let player_config = PlayerConfig {
+        bitrate: opts.bitrate,
+        gapless: opts.gapless,
+        normalisation: opts.volume_normalisation,
+        normalisation_pregain: opts
+            .normalisation_pregain
+            .unwrap_or(PlayerConfig::default().normalisation_pregain),
     };
 
     let connect_config = ConnectConfig {
         name: opts.device_name,
-        device_type: opts.device_type,
+        device_type: DeviceType::Smartphone,
         volume: initial_volume,
         volume_ctrl: opts.volume_ctrl,
         autoplay: opts.autoplay,
     };
 
     Setup {
-        backend: backend,
-        cache: cache,
-        session_config: session_config,
-        player_config: player_config,
-        connect_config: connect_config,
-        credentials: credentials,
+        backend,
+        cache,
+        session_config,
+        player_config,
+        connect_config,
+        credentials: Some(credentials),
         device: opts.device,
         enable_discovery: opts.discovery,
         zeroconf_port: opts.zeroconf_port,
-        mixer: mixer,
-        mixer_config: mixer_config,
+        mixer,
+        mixer_config,
     }
 }
 
@@ -251,7 +218,7 @@ struct Main {
     handle: Handle,
 
     discovery: Option<DiscoveryStream>,
-    signal: IoStream<()>,
+    control_rx: UnboundedReceiver<ControlMessage>,
 
     spirc: Option<Spirc>,
     spirc_task: Option<SpircTask>,
@@ -265,7 +232,7 @@ struct Main {
 }
 
 impl Main {
-    fn new(handle: Handle, setup: Setup) -> Main {
+    fn new(handle: Handle, control_rx: UnboundedReceiver<ControlMessage>, setup: Setup) -> Main {
         let mut task = Main {
             handle: handle.clone(),
             cache: setup.cache,
@@ -284,7 +251,7 @@ impl Main {
             shutdown: false,
             last_credentials: None,
             auto_connect_times: Vec::new(),
-            signal: Box::new(tokio_signal::ctrl_c().flatten_stream()),
+            control_rx,
 
             player_event_channel: None,
         };
@@ -329,7 +296,7 @@ impl Future for Main {
             let mut progress = false;
 
             if let Some(Async::Ready(Some(creds))) =
-            self.discovery.as_mut().map(|d| d.poll().unwrap())
+                self.discovery.as_mut().map(|d| d.poll().unwrap())
             {
                 if let Some(ref spirc) = self.spirc {
                     spirc.shutdown();
@@ -356,7 +323,6 @@ impl Future for Main {
                             (backend)(device)
                         });
 
-
                     let (spirc, spirc_task) = Spirc::new(connect_config, session, player, mixer);
                     self.spirc = Some(spirc);
                     self.spirc_task = Some(spirc_task);
@@ -371,18 +337,22 @@ impl Future for Main {
                 }
             }
 
-            if let Async::Ready(Some(())) = self.signal.poll().unwrap() {
-                trace!("Ctrl-C received");
-                if !self.shutdown {
-                    if let Some(ref spirc) = self.spirc {
-                        spirc.shutdown();
-                    } else {
-                        return Ok(Async::Ready(()));
+            if let Async::Ready(Some(msg)) = self.control_rx.poll().unwrap() {
+                match msg {
+                    ControlMessage::Shutdown => {
+                        if !self.shutdown {
+                            if let Some(ref spirc) = self.spirc {
+                                spirc.shutdown();
+                            } else {
+                                return Ok(Async::Ready(()));
+                            }
+                            self.shutdown = true;
+                        } else {
+                            return Ok(Async::Ready(()));
+                        }
                     }
-                    self.shutdown = true;
-                } else {
-                    return Ok(Async::Ready(()));
-                }
+                    _ => (),
+                };
 
                 progress = true;
             }
@@ -432,11 +402,34 @@ impl Future for Main {
     }
 }
 
-fn main() {
-    if env::var("RUST_BACKTRACE").is_err() {
-        env::set_var("RUST_BACKTRACE", "full")
+pub struct LibrespotThread {
+    handle: JoinHandle<()>,
+    control: UnboundedSender<ControlMessage>,
+}
+
+impl LibrespotThread {
+    pub fn run() -> Self {
+        let (control_tx, control_rx) = futures::sync::mpsc::unbounded();
+        let handle = thread::Builder::new()
+            .name("librespot".to_string())
+            .spawn(move || {
+                let mut core = Core::new().unwrap();
+                core.run(Main::new(core.handle(), control_rx, setup()))
+                    .unwrap();
+            })
+            .unwrap();
+
+        LibrespotThread {
+            handle,
+            control: control_tx,
+        }
     }
 
-    let mut core = Core::new().unwrap();
-    core.run(Main::new(core.handle(), setup())).unwrap()
+    pub fn shutdown(self) {
+        if let Err(_) = self.control.unbounded_send(ControlMessage::Shutdown) {
+            warn!("Shutdown could not send because thread is already dead");
+        } else {
+            self.handle.join().unwrap();
+        }
+    }
 }

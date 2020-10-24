@@ -1,5 +1,5 @@
-use qobject_compiler::{CcBuild, QObjectBuild, QObjectMethod, QObjectProp, TypeRef};
 use qobject_compiler::moc::MocConfig;
+use qobject_compiler::{CcBuild, QObjectBuild, QObjectMethod, QObjectProp, TypeRef};
 use qt5qml::core::QString;
 
 fn main() {
@@ -24,7 +24,7 @@ fn main() {
         .property(
             &QObjectProp::new(&TypeRef::qstring(), "username")
                 .read("username")
-                .write("setUsername")
+                .write("setUsername"),
         )
         .method(&QObjectMethod::new("username").const_().ret::<QString>())
         .method(&QObjectMethod::new("setUsername").arg::<&QString>("value"))
