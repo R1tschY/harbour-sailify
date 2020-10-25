@@ -8,9 +8,8 @@ use std::time::Instant;
 
 use futures::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::{Async, Future, Poll, Stream};
-use librespot::connect::discovery::{discovery, DiscoveryStream};
 use librespot::connect::spirc::{Spirc, SpircTask};
-use librespot::core::authentication::{get_credentials, Credentials};
+use librespot::core::authentication::Credentials;
 use librespot::core::cache::Cache;
 use librespot::core::config::{ConnectConfig, DeviceType, SessionConfig, VolumeCtrl};
 use librespot::core::session::Session;
@@ -19,13 +18,18 @@ use librespot::playback::audio_backend::{self, Sink};
 use librespot::playback::config::{Bitrate, PlayerConfig};
 use librespot::playback::mixer::{self, Mixer, MixerConfig};
 use librespot::playback::player::{Player, PlayerEvent};
-use log::{error, info, trace, warn};
+use log::{error, info, warn};
+use qt5qml::core::QString;
+use qt5qml::QBox;
 use sha1::{Digest, Sha1};
 use tokio_core::reactor::{Core, Handle};
-use tokio_io::IoStream;
 use url::Url;
 
+use crate::player::qtgateway::LibrespotGateway;
+use crate::utils::UnsafeSend;
+
 pub mod qobject;
+pub mod qtgateway;
 
 fn device_id(name: &str) -> String {
     hex::encode(Sha1::digest(name.as_bytes()))
@@ -217,7 +221,6 @@ struct Main {
     mixer_config: MixerConfig,
     handle: Handle,
 
-    discovery: Option<DiscoveryStream>,
     control_rx: UnboundedReceiver<ControlMessage>,
 
     spirc: Option<Spirc>,
@@ -229,10 +232,16 @@ struct Main {
     auto_connect_times: Vec<Instant>,
 
     player_event_channel: Option<UnboundedReceiver<PlayerEvent>>,
+    gateway: QBox<LibrespotGateway>,
 }
 
 impl Main {
-    fn new(handle: Handle, control_rx: UnboundedReceiver<ControlMessage>, setup: Setup) -> Main {
+    fn new(
+        handle: Handle,
+        control_rx: UnboundedReceiver<ControlMessage>,
+        gateway: QBox<LibrespotGateway>,
+        setup: Setup,
+    ) -> Main {
         let mut task = Main {
             handle: handle.clone(),
             cache: setup.cache,
@@ -245,7 +254,6 @@ impl Main {
             mixer_config: setup.mixer_config,
 
             connect: Box::new(futures::future::empty()),
-            discovery: None,
             spirc: None,
             spirc_task: None,
             shutdown: false,
@@ -254,15 +262,8 @@ impl Main {
             control_rx,
 
             player_event_channel: None,
+            gateway,
         };
-
-        if setup.enable_discovery {
-            let config = task.connect_config.clone();
-            let device_id = task.session_config.device_id.clone();
-
-            task.discovery =
-                Some(discovery(&handle, config, device_id, setup.zeroconf_port).unwrap());
-        }
 
         if let Some(credentials) = setup.credentials {
             task.credentials(credentials);
@@ -294,18 +295,6 @@ impl Future for Main {
     fn poll(&mut self) -> Poll<(), ()> {
         loop {
             let mut progress = false;
-
-            if let Some(Async::Ready(Some(creds))) =
-                self.discovery.as_mut().map(|d| d.poll().unwrap())
-            {
-                if let Some(ref spirc) = self.spirc {
-                    spirc.shutdown();
-                }
-                self.auto_connect_times.clear();
-                self.credentials(creds);
-
-                progress = true;
-            }
 
             match self.connect.poll() {
                 Ok(Async::Ready(session)) => {
@@ -390,8 +379,11 @@ impl Future for Main {
 
             if let Some(ref mut player_event_channel) = self.player_event_channel {
                 if let Async::Ready(Some(event)) = player_event_channel.poll().unwrap() {
+                    unsafe {
+                        self.gateway
+                            .playerEvent(&QString::from_utf8(&format!("{:?}", event)));
+                    }
                     progress = true;
-                    info!("Player event: {:?}", event)
                 }
             }
 
@@ -408,14 +400,20 @@ pub struct LibrespotThread {
 }
 
 impl LibrespotThread {
-    pub fn run() -> Self {
+    pub fn run(gateway: QBox<LibrespotGateway>) -> Self {
+        let sendable_gateway = UnsafeSend::new(gateway);
         let (control_tx, control_rx) = futures::sync::mpsc::unbounded();
         let handle = thread::Builder::new()
             .name("librespot".to_string())
             .spawn(move || {
                 let mut core = Core::new().unwrap();
-                core.run(Main::new(core.handle(), control_rx, setup()))
-                    .unwrap();
+                core.run(Main::new(
+                    core.handle(),
+                    control_rx,
+                    unsafe { sendable_gateway.unwrap() },
+                    setup(),
+                ))
+                .unwrap();
             })
             .unwrap();
 

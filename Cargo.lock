@@ -1149,7 +1149,7 @@ dependencies = [
 [[package]]
 name = "qobject-compiler"
 version = "0.1.0"
-source = "git+https://github.com/R1tschY/qobject-rs.git?rev=1192b73e#1192b73e15afc050eaa08b3f683bb22747f2e9f8"
+source = "git+https://github.com/R1tschY/qobject-rs.git?rev=00598aa9#00598aa930195641dd67c8f61950034366e6041e"
 dependencies = [
  "cc",
  "lazy_static",
@@ -1161,7 +1161,7 @@ dependencies = [
 [[package]]
 name = "qt5qml"
 version = "0.1.0"
-source = "git+https://github.com/R1tschY/qobject-rs.git?rev=1192b73e#1192b73e15afc050eaa08b3f683bb22747f2e9f8"
+source = "git+https://github.com/R1tschY/qobject-rs.git?rev=00598aa9#00598aa930195641dd67c8f61950034366e6041e"
 dependencies = [
  "cpp",
  "cpp_build",

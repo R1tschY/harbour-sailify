@@ -1,9 +1,10 @@
 use log::warn;
 use qt5qml::core::{QApplicationFactory, QObjectRef};
+use qt5qml::QBox;
 use sailfishapp::SailfishApp;
 use sailify::player::qobject::Librespot;
 use sailify::player::LibrespotThread;
-use std::env;
+use std::{env, ptr};
 
 fn setup_logging(verbose: bool) {
     let mut builder = env_logger::Builder::new();
@@ -30,9 +31,9 @@ fn setup_logging(verbose: bool) {
 fn main() {
     setup_logging(true);
 
-    let mut app = SailfishApp::new_from_env_args();
+    let app = SailfishApp::new_from_env_args();
 
-    let _librespot = Librespot::new(app.as_qobject_mut());
+    let _librespot = Librespot::new(ptr::null_mut());
 
     let mut view = SailfishApp::create_view();
     view.set_source(&SailfishApp::path_to_main_qml());

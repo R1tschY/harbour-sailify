@@ -1,5 +1,5 @@
 Name:       harbour-sailify
-Summary:    Sailfish sample application
+Summary:    User-friendly Spotify client for Sailfish OS
 Version:    1.0
 Release:    1
 Group:      Qt/Qt
@@ -18,8 +18,7 @@ BuildRequires:  cargo
 
 
 %description
-This sample project shows how to build a Sailfish application with a
-custom build system
+A Spotify client for Sailfish OS focused on usability and stability.
 
 # - PREP -----------------------------------------------------------------------
 %prep
@@ -28,7 +27,9 @@ custom build system
 # - BUILD ----------------------------------------------------------------------
 %build
 
-cargo build -j 4
+export RPM_VERSION=%{version}
+# export CARGO_INCREMENTAL=0
+cargo build --manifest-path %{_sourcedir}/../Cargo.toml
 
 # - INSTALL --------------------------------------------------------------------
 %install
@@ -37,8 +38,9 @@ rm -rf %{buildroot}
 install -d %{buildroot}%{_datadir}/applications
 install -d %{buildroot}%{_datadir}/%{name}
 install -d %{buildroot}%{_datadir}/icons/hicolor/86x86/apps
+install -d %{buildroot}%{_bindir}
 
-cargo install --path . --root %{buildroot}%{_exec_prefix} --debug --no-track
+install -m 755 target/debug/harbour-sailify %{buildroot}%{_bindir}/harbour-sailify
 
 install harbour-sailify.png %{buildroot}%{_datadir}/icons/hicolor/86x86/apps
 install harbour-sailify.desktop %{buildroot}%{_datadir}/applications

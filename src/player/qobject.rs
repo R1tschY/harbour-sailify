@@ -1,6 +1,12 @@
+use std::ptr;
+
+use log::warn;
+use qt5qml::core::{ConnectionTypeKind, QObject, QObjectRef, QString};
+use qt5qml::QBox;
+use qt5qml::{signal, slot};
+
+use crate::player::qtgateway::LibrespotGateway;
 use crate::player::LibrespotThread;
-use log::info;
-use qt5qml::core::QString;
 
 include!(concat!(env!("OUT_DIR"), "/qffi_Librespot.rs"));
 
@@ -12,10 +18,18 @@ pub struct LibrespotPrivate {
 
 impl LibrespotPrivate {
     pub fn new(qobject: *mut Librespot) -> Self {
-        info!("NEW");
+        let gateway: QBox<LibrespotGateway> = LibrespotGateway::new(ptr::null_mut());
+        QObject::connect(
+            gateway.as_qobject(),
+            signal!("playerEvent(const QString&)"),
+            unsafe { &*qobject }.as_qobject(),
+            slot!("onPlayerEvent(const QString&)"),
+            ConnectionTypeKind::Queued,
+        );
+
         Self {
             qobject,
-            thread: Some(LibrespotThread::run()),
+            thread: Some(LibrespotThread::run(gateway)),
             username: "".to_string(),
         }
     }
@@ -27,11 +41,14 @@ impl LibrespotPrivate {
     pub fn set_username(&mut self, value: &QString) {
         self.username = value.to_string();
     }
+
+    pub fn on_player_event(&mut self, event: &QString) {
+        warn!("GOT event: {}", event)
+    }
 }
 
 impl Drop for LibrespotPrivate {
     fn drop(&mut self) {
-        info!("DROP");
         if let Some(thread) = std::mem::replace(&mut self.thread, None) {
             thread.shutdown()
         }

@@ -2,6 +2,8 @@
 name = "sailify"
 version = "0.1.0"
 authors = ["Richard Liebscher <r1tschy@posteo.de>"]
+description = "A Spotify client for Sailfish OS focused on usability and stability"
+license = "GPL-3.0-or-later"
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -21,10 +23,10 @@ log = "0.4"
 env_logger =  { version = "0.6", default-features = false, features = ["termcolor","humantime","atty"]}
 
 # qt app
-qt5qml = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "1192b73e" }
+qt5qml = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "00598aa9" }
 sailfishapp = { path = "sailfishapp" }
 
 [build-dependencies]
-qobject-compiler = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "1192b73e"}
-qt5qml = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "1192b73e"}
+qobject-compiler = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "00598aa9"}
+qt5qml = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "00598aa9"}
 pkg-config = "0.3"

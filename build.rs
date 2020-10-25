@@ -1,5 +1,6 @@
 use qobject_compiler::moc::MocConfig;
-use qobject_compiler::{CcBuild, QObjectBuild, QObjectMethod, QObjectProp, TypeRef};
+use qobject_compiler::qobject::TypeRefTrait;
+use qobject_compiler::{CcBuild, QObjectBuild, QObjectMethod, QObjectProp, QObjectSignal, TypeRef};
 use qt5qml::core::QString;
 
 fn main() {
@@ -28,5 +29,13 @@ fn main() {
         )
         .method(&QObjectMethod::new("username").const_().ret::<QString>())
         .method(&QObjectMethod::new("setUsername").arg::<&QString>("value"))
+        .slot(&QObjectMethod::new("onPlayerEvent").arg::<&QString>("event"))
+        .build(&cpp, &moc);
+
+    QObjectBuild::new("LibrespotGateway")
+        .inherit(TypeRef::qobject())
+        .signal(
+            &QObjectSignal::new("playerEvent").arg("event", &TypeRef::qstring().with_const_ref()),
+        )
         .build(&cpp, &moc);
 }
