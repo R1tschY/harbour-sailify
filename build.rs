@@ -27,9 +27,30 @@ fn main() {
                 .read("username")
                 .write("setUsername"),
         )
+        .property(
+            &QObjectProp::new(&TypeRef::qstring(), "password")
+                .read("password")
+                .write("setPassword"),
+        )
+        .property(
+            &QObjectProp::new(&TypeRef::primitive::<bool>(), "active")
+                .read("isActive")
+                .notify("activeChanged"),
+        )
+        // username
         .method(&QObjectMethod::new("username").const_().ret::<QString>())
         .method(&QObjectMethod::new("setUsername").arg::<&QString>("value"))
-        .slot(&QObjectMethod::new("onPlayerEvent").arg::<&QString>("event"))
+        // password
+        .method(&QObjectMethod::new("password").const_().ret::<QString>())
+        .method(&QObjectMethod::new("setPassword").arg::<&QString>("value"))
+        // active
+        .method(&QObjectMethod::new("isActive").const_().ret::<bool>())
+        .signal(&QObjectSignal::new("activeChanged").arg("value", &TypeRef::primitive::<bool>()))
+        // slots
+        .slot(&QObjectMethod::new("start"))
+        .slot(&QObjectMethod::new("stop"))
+        // private slots
+        .slot(&QObjectMethod::new("_onPlayerEvent").arg::<&QString>("event"))
         .build(&cpp, &moc);
 
     QObjectBuild::new("LibrespotGateway")

@@ -54,11 +54,9 @@ struct Setup {
     connect_config: ConnectConfig,
     mixer_config: MixerConfig,
     credentials: Option<Credentials>,
-    enable_discovery: bool,
-    zeroconf_port: u16,
 }
 
-struct Options {
+pub struct Options {
     cache: Option<PathBuf>,
     audio_cache: bool,
     device_name: String,
@@ -67,7 +65,6 @@ struct Options {
     password: String,
     proxy: Option<String>,
     ap_port: Option<u16>,
-    discovery: bool,
     backend: Option<String>,
     device: Option<String>,
     mixer: Option<String>,
@@ -76,7 +73,6 @@ struct Options {
     mixer_index: u32,
     mixer_linear_volume: bool,
     initial_volume: Option<u16>,
-    zeroconf_port: u16,
     volume_normalisation: bool,
     normalisation_pregain: Option<f32>,
     volume_ctrl: VolumeCtrl,
@@ -95,7 +91,6 @@ impl Options {
             password: "".to_string(),
             proxy: None,
             ap_port: None,
-            discovery: true,
             backend: None,
             device: None,
             mixer: None,
@@ -104,7 +99,6 @@ impl Options {
             mixer_index: 0,
             mixer_linear_volume: false,
             initial_volume: None,
-            zeroconf_port: 0,
             volume_normalisation: false,
             normalisation_pregain: None,
             volume_ctrl: VolumeCtrl::default(),
@@ -114,16 +108,12 @@ impl Options {
     }
 }
 
-fn setup() -> Setup {
+fn setup(opts: Options) -> Setup {
     info!(
         "sailify/{} librespot/{}",
         env!("CARGO_PKG_VERSION"),
         version::semver(),
     );
-
-    let mut opts = Options::new();
-    opts.username = env::var("SPOTIFY_USERNAME").expect("SPOTIFY_USERNAME env var missing");
-    opts.password = env::var("SPOTIFY_PASSWORD").expect("SPOTIFY_PASSWORD env var missing");
 
     let backend = audio_backend::find(opts.backend).expect("Invalid backend");
 
@@ -203,8 +193,6 @@ fn setup() -> Setup {
         connect_config,
         credentials: Some(credentials),
         device: opts.device,
-        enable_discovery: opts.discovery,
-        zeroconf_port: opts.zeroconf_port,
         mixer,
         mixer_config,
     }
@@ -400,7 +388,7 @@ pub struct LibrespotThread {
 }
 
 impl LibrespotThread {
-    pub fn run(gateway: QBox<LibrespotGateway>) -> Self {
+    pub fn run(gateway: QBox<LibrespotGateway>, options: Options) -> Self {
         let sendable_gateway = UnsafeSend::new(gateway);
         let (control_tx, control_rx) = futures::sync::mpsc::unbounded();
         let handle = thread::Builder::new()
@@ -411,7 +399,7 @@ impl LibrespotThread {
                     core.handle(),
                     control_rx,
                     unsafe { sendable_gateway.unwrap() },
-                    setup(),
+                    setup(options),
                 ))
                 .unwrap();
             })

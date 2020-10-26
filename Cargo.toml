@@ -23,10 +23,10 @@ log = "0.4"
 env_logger =  { version = "0.6", default-features = false, features = ["termcolor","humantime","atty"]}
 
 # qt app
-qt5qml = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "00598aa9" }
+qt5qml = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "4024bbc0" }
 sailfishapp = { path = "sailfishapp" }
 
 [build-dependencies]
-qobject-compiler = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "00598aa9"}
-qt5qml = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "00598aa9"}
+qobject-compiler = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "4024bbc0"}
+qt5qml = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "4024bbc0"}
 pkg-config = "0.3"

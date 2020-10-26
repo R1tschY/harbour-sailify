@@ -6,6 +6,10 @@
 
 *.list
 
+# Qt Creator
+*.autosave
+*.user
+
 # IDEA
 /.idea
 *.iml

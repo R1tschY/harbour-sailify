@@ -17,7 +17,6 @@ Page {
             }
         }
 
-        // Tell SilicaFlickable the height of its content.
         contentHeight: column.height
 
         // Place our content in a Column.  The PageHeader is always placed at the top
@@ -27,14 +26,9 @@ Page {
 
             width: page.width
             spacing: Theme.paddingLarge
+
             PageHeader {
-                title: qsTr("UI Template")
-            }
-            Label {
-                x: Theme.paddingLarge
-                text: qsTr("Hello Sailors")
-                color: Theme.secondaryHighlightColor
-                font.pixelSize: Theme.fontSizeExtraLarge
+                title: qsTr("Sailify")
             }
         }
     }

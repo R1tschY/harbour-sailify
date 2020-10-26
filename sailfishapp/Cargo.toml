@@ -10,4 +10,4 @@ pkg-config = "0.3"
 
 [dependencies]
 cpp = "0.5"
-qt5qml = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "00598aa9" }
+qt5qml = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "4024bbc0" }
