@@ -19,41 +19,22 @@ use librespot::playback::config::{Bitrate, PlayerConfig};
 use librespot::playback::mixer::{self, Mixer, MixerConfig};
 use librespot::playback::player::{Player, PlayerEvent};
 use log::{error, info, warn};
-use qt5qml::core::QString;
+use qt5qml::core::{QByteArray, QString};
 use qt5qml::QBox;
 use sha1::{Digest, Sha1};
 use tokio_core::reactor::{Core, Handle};
 use url::Url;
 
-use crate::player::qtgateway::LibrespotGateway;
+use crate::player::controller::{ControlMessage, Controller, LibrespotConfig};
+use crate::player::qtgateway::{serialize_event, LibrespotGateway};
 use crate::utils::UnsafeSend;
 
+pub mod controller;
 pub mod qobject;
 pub mod qtgateway;
 
 fn device_id(name: &str) -> String {
     hex::encode(Sha1::digest(name.as_bytes()))
-}
-
-#[derive(Clone, Debug)]
-pub enum ControlMessage {
-    Start(),
-    Shutdown,
-}
-
-#[derive(Clone)]
-struct Setup {
-    backend: fn(Option<String>) -> Box<dyn Sink>,
-    device: Option<String>,
-
-    mixer: fn(Option<MixerConfig>) -> Box<dyn Mixer>,
-
-    cache: Option<Cache>,
-    player_config: PlayerConfig,
-    session_config: SessionConfig,
-    connect_config: ConnectConfig,
-    mixer_config: MixerConfig,
-    credentials: Option<Credentials>,
 }
 
 pub struct Options {
@@ -108,7 +89,7 @@ impl Options {
     }
 }
 
-fn setup(opts: Options) -> Setup {
+fn setup(opts: Options) -> LibrespotConfig {
     info!(
         "sailify/{} librespot/{}",
         env!("CARGO_PKG_VERSION"),
@@ -185,7 +166,7 @@ fn setup(opts: Options) -> Setup {
         autoplay: opts.autoplay,
     };
 
-    Setup {
+    LibrespotConfig {
         backend,
         cache,
         session_config,
@@ -195,190 +176,6 @@ fn setup(opts: Options) -> Setup {
         device: opts.device,
         mixer,
         mixer_config,
-    }
-}
-
-struct Main {
-    cache: Option<Cache>,
-    player_config: PlayerConfig,
-    session_config: SessionConfig,
-    connect_config: ConnectConfig,
-    backend: fn(Option<String>) -> Box<dyn Sink>,
-    device: Option<String>,
-    mixer: fn(Option<MixerConfig>) -> Box<dyn Mixer>,
-    mixer_config: MixerConfig,
-    handle: Handle,
-
-    control_rx: UnboundedReceiver<ControlMessage>,
-
-    spirc: Option<Spirc>,
-    spirc_task: Option<SpircTask>,
-    connect: Box<dyn Future<Item = Session, Error = io::Error>>,
-
-    shutdown: bool,
-    last_credentials: Option<Credentials>,
-    auto_connect_times: Vec<Instant>,
-
-    player_event_channel: Option<UnboundedReceiver<PlayerEvent>>,
-    gateway: QBox<LibrespotGateway>,
-}
-
-impl Main {
-    fn new(
-        handle: Handle,
-        control_rx: UnboundedReceiver<ControlMessage>,
-        gateway: QBox<LibrespotGateway>,
-        setup: Setup,
-    ) -> Main {
-        let mut task = Main {
-            handle: handle.clone(),
-            cache: setup.cache,
-            session_config: setup.session_config,
-            player_config: setup.player_config,
-            connect_config: setup.connect_config,
-            backend: setup.backend,
-            device: setup.device,
-            mixer: setup.mixer,
-            mixer_config: setup.mixer_config,
-
-            connect: Box::new(futures::future::empty()),
-            spirc: None,
-            spirc_task: None,
-            shutdown: false,
-            last_credentials: None,
-            auto_connect_times: Vec::new(),
-            control_rx,
-
-            player_event_channel: None,
-            gateway,
-        };
-
-        if let Some(credentials) = setup.credentials {
-            task.credentials(credentials);
-        }
-
-        task
-    }
-
-    fn credentials(&mut self, credentials: Credentials) {
-        self.last_credentials = Some(credentials.clone());
-        let config = self.session_config.clone();
-        let handle = self.handle.clone();
-
-        let connection = Session::connect(config, credentials, self.cache.clone(), handle);
-
-        self.connect = connection;
-        self.spirc = None;
-        let task = mem::replace(&mut self.spirc_task, None);
-        if let Some(task) = task {
-            self.handle.spawn(task);
-        }
-    }
-}
-
-impl Future for Main {
-    type Item = ();
-    type Error = ();
-
-    fn poll(&mut self) -> Poll<(), ()> {
-        loop {
-            let mut progress = false;
-
-            match self.connect.poll() {
-                Ok(Async::Ready(session)) => {
-                    self.connect = Box::new(futures::future::empty());
-                    let mixer_config = self.mixer_config.clone();
-                    let mixer = (self.mixer)(Some(mixer_config));
-                    let player_config = self.player_config.clone();
-                    let connect_config = self.connect_config.clone();
-
-                    let audio_filter = mixer.get_audio_filter();
-                    let backend = self.backend;
-                    let device = self.device.clone();
-                    let (player, event_channel) =
-                        Player::new(player_config, session.clone(), audio_filter, move || {
-                            (backend)(device)
-                        });
-
-                    let (spirc, spirc_task) = Spirc::new(connect_config, session, player, mixer);
-                    self.spirc = Some(spirc);
-                    self.spirc_task = Some(spirc_task);
-                    self.player_event_channel = Some(event_channel);
-
-                    progress = true;
-                }
-                Ok(Async::NotReady) => (),
-                Err(error) => {
-                    error!("Could not connect to server: {}", error);
-                    self.connect = Box::new(futures::future::empty());
-                }
-            }
-
-            if let Async::Ready(Some(msg)) = self.control_rx.poll().unwrap() {
-                match msg {
-                    ControlMessage::Shutdown => {
-                        if !self.shutdown {
-                            if let Some(ref spirc) = self.spirc {
-                                spirc.shutdown();
-                            } else {
-                                return Ok(Async::Ready(()));
-                            }
-                            self.shutdown = true;
-                        } else {
-                            return Ok(Async::Ready(()));
-                        }
-                    }
-                    _ => (),
-                };
-
-                progress = true;
-            }
-
-            let mut drop_spirc_and_try_to_reconnect = false;
-            if let Some(ref mut spirc_task) = self.spirc_task {
-                if let Async::Ready(()) = spirc_task.poll().unwrap() {
-                    if self.shutdown {
-                        return Ok(Async::Ready(()));
-                    } else {
-                        warn!("Spirc shut down unexpectedly");
-                        drop_spirc_and_try_to_reconnect = true;
-                    }
-                    progress = true;
-                }
-            }
-            if drop_spirc_and_try_to_reconnect {
-                self.spirc_task = None;
-                let now = Instant::now();
-                while (!self.auto_connect_times.is_empty())
-                    && ((now - self.auto_connect_times[0]).as_secs() > 600)
-                {
-                    let _ = self.auto_connect_times.remove(0);
-                }
-
-                if let Some(credentials) = self.last_credentials.clone() {
-                    if self.auto_connect_times.len() >= 5 {
-                        warn!("Spirc shut down too often. Not reconnecting automatically.");
-                    } else {
-                        self.auto_connect_times.push(now);
-                        self.credentials(credentials);
-                    }
-                }
-            }
-
-            if let Some(ref mut player_event_channel) = self.player_event_channel {
-                if let Async::Ready(Some(event)) = player_event_channel.poll().unwrap() {
-                    unsafe {
-                        self.gateway
-                            .playerEvent(&QString::from_utf8(&format!("{:?}", event)));
-                    }
-                    progress = true;
-                }
-            }
-
-            if !progress {
-                return Ok(Async::NotReady);
-            }
-        }
     }
 }
 
@@ -395,7 +192,7 @@ impl LibrespotThread {
             .name("librespot".to_string())
             .spawn(move || {
                 let mut core = Core::new().unwrap();
-                core.run(Main::new(
+                core.run(Controller::new(
                     core.handle(),
                     control_rx,
                     unsafe { sendable_gateway.unwrap() },

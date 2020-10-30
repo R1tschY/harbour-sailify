@@ -28,8 +28,14 @@ A Spotify client for Sailfish OS focused on usability and stability.
 %build
 
 export RPM_VERSION=%{version}
-# export CARGO_INCREMENTAL=0
-cargo build --manifest-path %{_sourcedir}/../Cargo.toml
+
+# release
+#export CARGO_INCREMENTAL=0
+#cargo build -j1 --release --manifest-path %{_sourcedir}/../Cargo.toml
+
+# debug
+export RUSTFLAGS="-Clink-arg=-Wl,-z,relro,-z,now -Ccodegen-units=1"
+cargo build -j1 --manifest-path %{_sourcedir}/../Cargo.toml
 
 # - INSTALL --------------------------------------------------------------------
 %install

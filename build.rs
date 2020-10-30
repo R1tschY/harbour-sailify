@@ -1,7 +1,7 @@
 use qobject_compiler::moc::MocConfig;
-use qobject_compiler::qobject::TypeRefTrait;
+use qobject_compiler::typeref::TypeRefTrait;
 use qobject_compiler::{CcBuild, QObjectBuild, QObjectMethod, QObjectProp, QObjectSignal, TypeRef};
-use qt5qml::core::QString;
+use qt5qml::core::{QByteArray, QString};
 
 fn main() {
     // Qt
@@ -23,40 +23,38 @@ fn main() {
     QObjectBuild::new("Librespot")
         .inherit(TypeRef::qobject())
         .property(
-            &QObjectProp::new(&TypeRef::qstring(), "username")
+            QObjectProp::new::<QString>("username")
                 .read("username")
                 .write("setUsername"),
         )
         .property(
-            &QObjectProp::new(&TypeRef::qstring(), "password")
+            QObjectProp::new::<QString>("password")
                 .read("password")
                 .write("setPassword"),
         )
         .property(
-            &QObjectProp::new(&TypeRef::primitive::<bool>(), "active")
+            QObjectProp::new::<bool>("active")
                 .read("isActive")
                 .notify("activeChanged"),
         )
         // username
-        .method(&QObjectMethod::new("username").const_().ret::<QString>())
-        .method(&QObjectMethod::new("setUsername").arg::<&QString>("value"))
+        .method(QObjectMethod::new("username").const_().ret::<QString>())
+        .method(QObjectMethod::new("setUsername").arg::<&QString>("value"))
         // password
-        .method(&QObjectMethod::new("password").const_().ret::<QString>())
-        .method(&QObjectMethod::new("setPassword").arg::<&QString>("value"))
+        .method(QObjectMethod::new("password").const_().ret::<QString>())
+        .method(QObjectMethod::new("setPassword").arg::<&QString>("value"))
         // active
-        .method(&QObjectMethod::new("isActive").const_().ret::<bool>())
-        .signal(&QObjectSignal::new("activeChanged").arg("value", &TypeRef::primitive::<bool>()))
+        .method(QObjectMethod::new("isActive").const_().ret::<bool>())
+        .signal(QObjectSignal::new("activeChanged").arg::<bool>("value"))
         // slots
-        .slot(&QObjectMethod::new("start"))
-        .slot(&QObjectMethod::new("stop"))
+        .slot(QObjectMethod::new("start"))
+        .slot(QObjectMethod::new("stop"))
         // private slots
-        .slot(&QObjectMethod::new("_onPlayerEvent").arg::<&QString>("event"))
+        .slot(QObjectMethod::new("_onPlayerEvent").arg::<&QByteArray>("event"))
         .build(&cpp, &moc);
 
     QObjectBuild::new("LibrespotGateway")
         .inherit(TypeRef::qobject())
-        .signal(
-            &QObjectSignal::new("playerEvent").arg("event", &TypeRef::qstring().with_const_ref()),
-        )
+        .signal(QObjectSignal::new("playerEvent").arg::<&QByteArray>("event"))
         .build(&cpp, &moc);
 }

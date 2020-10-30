@@ -1,20 +1,31 @@
 use std::ptr;
 
-use log::warn;
-use qt5qml::core::{ConnectionTypeKind, QObject, QObjectRef, QString};
+use log::info;
+use qt5qml::core::{ConnectionTypeKind, QByteArray, QObject, QObjectRef, QString};
 use qt5qml::QBox;
 use qt5qml::{cstr, signal, slot};
 
-use crate::player::qtgateway::LibrespotGateway;
+use crate::player::qtgateway::{deserialize_event, LibrespotGateway};
 use crate::player::{LibrespotThread, Options};
 
 include!(concat!(env!("OUT_DIR"), "/qffi_Librespot.rs"));
+
+enum PlayerState {
+    Disconnected,
+    Paused,
+    Playing,
+    Buffering,
+}
 
 pub struct LibrespotPrivate {
     qobject: *mut Librespot,
     thread: Option<LibrespotThread>,
     username: String,
     password: String,
+
+    last_error: Option<String>,
+    state: PlayerState,
+    track: Option<String>,
 }
 
 pub fn register_librespot() {
@@ -28,6 +39,10 @@ impl LibrespotPrivate {
             thread: None,
             username: "".to_string(),
             password: "".to_string(),
+
+            last_error: None,
+            state: PlayerState::Paused,
+            track: None,
         }
     }
 
@@ -49,8 +64,9 @@ impl LibrespotPrivate {
     }
 
     // #[slot]
-    pub fn on_player_event(&mut self, event: &QString) {
-        warn!("GOT event: {}", event)
+    pub fn on_player_event(&mut self, event: &QByteArray) {
+        let evt = deserialize_event(event.as_slice());
+        info!("GOT event: {:?}", evt);
     }
 
     // #[slot]
@@ -66,9 +82,9 @@ impl LibrespotPrivate {
         let mut gateway: QBox<LibrespotGateway> = LibrespotGateway::new(ptr::null_mut());
         QObject::connect(
             gateway.as_qobject(),
-            signal!("playerEvent(const QString&)"),
+            signal!("playerEvent(const QByteArray&)"),
             unsafe { &mut *self.qobject }.as_qobject(),
-            slot!("_onPlayerEvent(const QString&)"),
+            slot!("_onPlayerEvent(const QByteArray&)"),
             ConnectionTypeKind::Queued,
         );
         gateway.move_to_thread(None);

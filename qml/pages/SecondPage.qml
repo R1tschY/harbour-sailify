@@ -2,7 +2,7 @@ import QtQuick 2.0
 import Sailfish.Silica 1.0
 
 
-Page {
+Dialog {
     id: page
 
     SilicaFlickable {
@@ -10,8 +10,6 @@ Page {
 
         contentHeight: column.height
 
-        // Place our content in a Column.  The PageHeader is always placed at the top
-        // of the page, followed by our content.
         Column {
             id: column
 
@@ -19,7 +17,7 @@ Page {
             spacing: Theme.paddingLarge
 
             PageHeader {
-                title: qsTr("Config")
+                title: qsTr("Configure device")
             }
 
             TextField {
@@ -35,16 +33,28 @@ Page {
             PasswordField {
                 id: passwordField
                 EnterKey.iconSource: "image://theme/icon-m-enter-accept"
-                EnterKey.onClicked: {
-                    librespot.username = usernameField.text
-                    librespot.password = passwordField.text
-                    librespot.start()
-                }
+                EnterKey.onClicked: accept()
+            }
 
+            Label {
+                text: "Device support is powered by Librespot 0.X"
             }
         }
 
         VerticalScrollDecorator {}
+    }
+
+    onOpened: {
+        usernameField.text = librespot.username
+        passwordField.text = librespot.password
+    }
+
+    onDone: {
+        if (result == DialogResult.Accepted) {
+            librespot.username = usernameField.text
+            librespot.password = passwordField.text
+            librespot.start()
+        }
     }
 }
 
