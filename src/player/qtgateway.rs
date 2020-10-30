@@ -1,4 +1,3 @@
-use librespot::core::spotify_id::SpotifyId;
 use librespot::playback::player::PlayerEvent;
 use serde::{Deserialize, Serialize};
 
@@ -126,11 +125,11 @@ pub fn deserialize_event(evt: &[u8]) -> LibrespotEvent {
 }
 
 pub struct LibrespotGatewayPrivate {
-    qobject: *mut LibrespotGateway,
+    _qobject: *mut LibrespotGateway,
 }
 
 impl LibrespotGatewayPrivate {
     pub fn new(qobject: *mut LibrespotGateway) -> Self {
-        Self { qobject }
+        Self { _qobject: qobject }
     }
 }

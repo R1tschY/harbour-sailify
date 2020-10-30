@@ -1,35 +1,30 @@
 use std::env;
-use std::io;
-use std::mem;
 use std::path::PathBuf;
 use std::thread;
 use std::thread::JoinHandle;
-use std::time::Instant;
 
 use futures::sync::mpsc::{UnboundedReceiver, UnboundedSender};
-use futures::{Async, Future, Poll, Stream};
-use librespot::connect::spirc::{Spirc, SpircTask};
+use futures::Stream;
 use librespot::core::authentication::Credentials;
 use librespot::core::cache::Cache;
 use librespot::core::config::{ConnectConfig, DeviceType, SessionConfig, VolumeCtrl};
-use librespot::core::session::Session;
 use librespot::core::version;
-use librespot::playback::audio_backend::{self, Sink};
+use librespot::playback::audio_backend;
 use librespot::playback::config::{Bitrate, PlayerConfig};
 use librespot::playback::mixer::{self, Mixer, MixerConfig};
-use librespot::playback::player::{Player, PlayerEvent};
-use log::{error, info, warn};
-use qt5qml::core::{QByteArray, QString};
+use log::{info, warn};
 use qt5qml::QBox;
 use sha1::{Digest, Sha1};
-use tokio_core::reactor::{Core, Handle};
+use tokio_core::reactor::Core;
 use url::Url;
 
 use crate::player::controller::{ControlMessage, Controller, LibrespotConfig};
-use crate::player::qtgateway::{serialize_event, LibrespotGateway};
+use crate::player::error::{LibrespotError, LibrespotResult};
+use crate::player::qtgateway::LibrespotGateway;
 use crate::utils::UnsafeSend;
 
 pub mod controller;
+pub mod error;
 pub mod qobject;
 pub mod qtgateway;
 
@@ -89,7 +84,7 @@ impl Options {
     }
 }
 
-fn setup(opts: Options) -> LibrespotConfig {
+fn setup(opts: Options) -> LibrespotResult<LibrespotConfig> {
     info!(
         "sailify/{} librespot/{}",
         env!("CARGO_PKG_VERSION"),
@@ -166,7 +161,7 @@ fn setup(opts: Options) -> LibrespotConfig {
         autoplay: opts.autoplay,
     };
 
-    LibrespotConfig {
+    Ok(LibrespotConfig {
         backend,
         cache,
         session_config,
@@ -176,7 +171,7 @@ fn setup(opts: Options) -> LibrespotConfig {
         device: opts.device,
         mixer,
         mixer_config,
-    }
+    })
 }
 
 pub struct LibrespotThread {
@@ -185,27 +180,28 @@ pub struct LibrespotThread {
 }
 
 impl LibrespotThread {
-    pub fn run(gateway: QBox<LibrespotGateway>, options: Options) -> Self {
+    pub fn run(gateway: QBox<LibrespotGateway>, options: Options) -> LibrespotResult<Self> {
         let sendable_gateway = UnsafeSend::new(gateway);
+        let setup = setup(options)?;
+
         let (control_tx, control_rx) = futures::sync::mpsc::unbounded();
         let handle = thread::Builder::new()
             .name("librespot".to_string())
             .spawn(move || {
                 let mut core = Core::new().unwrap();
-                core.run(Controller::new(
+                let _ = core.run(Controller::new(
                     core.handle(),
                     control_rx,
                     unsafe { sendable_gateway.unwrap() },
-                    setup(options),
-                ))
-                .unwrap();
+                    setup,
+                ));
             })
             .unwrap();
 
-        LibrespotThread {
+        Ok(LibrespotThread {
             handle,
             control: control_tx,
-        }
+        })
     }
 
     pub fn shutdown(self) {

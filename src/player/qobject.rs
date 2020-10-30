@@ -5,6 +5,7 @@ use qt5qml::core::{ConnectionTypeKind, QByteArray, QObject, QObjectRef, QString}
 use qt5qml::QBox;
 use qt5qml::{cstr, signal, slot};
 
+use crate::player::error::LibrespotError;
 use crate::player::qtgateway::{deserialize_event, LibrespotGateway};
 use crate::player::{LibrespotThread, Options};
 
@@ -88,9 +89,14 @@ impl LibrespotPrivate {
             ConnectionTypeKind::Queued,
         );
         gateway.move_to_thread(None);
-        self.thread = Some(LibrespotThread::run(gateway, opts));
 
-        unsafe { &mut *self.qobject }.activeChanged(true);
+        match LibrespotThread::run(gateway, opts) {
+            Ok(thread) => {
+                self.thread = Some(thread);
+                unsafe { &mut *self.qobject }.activeChanged(true);
+            }
+            Err(err) => self.set_error(err),
+        }
     }
 
     // #[slot]
@@ -110,8 +116,28 @@ impl LibrespotPrivate {
         }
     }
 
+    // active
+
     pub fn is_active(&self) -> bool {
         self.thread.is_some()
+    }
+
+    // error
+
+    pub fn error_string(&self) -> QString {
+        if let Some(ref error) = &self.last_error {
+            QString::from_utf8(error)
+        } else {
+            QString::new()
+        }
+    }
+
+    fn set_error(&mut self, err: LibrespotError) {
+        let message = format!("{:?}", err);
+        let qt_message = QString::from_utf8(&message);
+
+        self.last_error = Some(message);
+        unsafe { &mut *self.qobject }.error(&qt_message);
     }
 }
 

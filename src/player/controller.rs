@@ -1,34 +1,24 @@
-use std::env;
 use std::io;
 use std::mem;
-use std::path::PathBuf;
-use std::thread;
-use std::thread::JoinHandle;
 use std::time::Instant;
 
-use futures::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+use futures::sync::mpsc::UnboundedReceiver;
 use futures::{Async, Future, Poll, Stream};
 use librespot::connect::spirc::{Spirc, SpircTask};
 use librespot::core::authentication::Credentials;
 use librespot::core::cache::Cache;
-use librespot::core::config::{ConnectConfig, DeviceType, SessionConfig, VolumeCtrl};
+use librespot::core::config::{ConnectConfig, SessionConfig};
 use librespot::core::session::Session;
-use librespot::core::version;
-use librespot::playback::audio_backend::{self, Sink};
-use librespot::playback::config::{Bitrate, PlayerConfig};
-use librespot::playback::mixer::{self, Mixer, MixerConfig};
+use librespot::playback::audio_backend::Sink;
+use librespot::playback::config::PlayerConfig;
+use librespot::playback::mixer::{Mixer, MixerConfig};
 use librespot::playback::player::{Player, PlayerEvent};
-use log::{error, info, warn};
-use qt5qml::core::{QByteArray, QString};
+use log::{error, warn};
+use qt5qml::core::QByteArray;
 use qt5qml::QBox;
-use sha1::{Digest, Sha1};
-use tokio_core::reactor::{Core, Handle};
-use url::Url;
+use tokio_core::reactor::Handle;
 
-use crate::player::qtgateway::{
-    serialize_event, LibrespotEvent, LibrespotGateway, LibrespotGatewayPrivate,
-};
-use crate::player::Options;
+use crate::player::qtgateway::{serialize_event, LibrespotEvent, LibrespotGateway};
 
 #[derive(Clone, Debug)]
 pub enum ControlMessage {
@@ -133,9 +123,7 @@ impl Controller {
     }
 
     fn send_gateway_event(gateway: &mut LibrespotGateway, evt: LibrespotEvent) {
-        unsafe {
-            gateway.playerEvent(&QByteArray::from_bytes(&serialize_event(evt)));
-        }
+        gateway.playerEvent(&QByteArray::from_bytes(&serialize_event(evt)));
     }
 }
 

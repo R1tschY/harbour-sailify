@@ -1,10 +1,7 @@
-use log::warn;
-use qt5qml::core::{QApplicationFactory, QObjectRef};
-use qt5qml::QBox;
+use qt5qml::core::QApplicationFactory;
 use sailfishapp::SailfishApp;
-use sailify::player::qobject::{register_librespot, Librespot};
-use sailify::player::LibrespotThread;
-use std::{env, ptr};
+use sailify::player::qobject::register_librespot;
+use std::env;
 
 fn setup_logging() {
     let mut builder = env_logger::Builder::new();

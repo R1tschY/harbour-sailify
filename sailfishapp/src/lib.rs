@@ -1,12 +1,11 @@
-#[macro_use]
 extern crate cpp;
 
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int};
-use std::pin::Pin;
-use qt5qml::core::{QApplicationFactory, QObjectRef, QUrl, QString};
-use qt5qml::gui::QGuiApplication;
+
 use cpp::cpp;
+use qt5qml::core::{QApplicationFactory, QString, QUrl};
+use qt5qml::gui::QGuiApplication;
 use qt5qml::QBox;
 
 mod quickview;
@@ -17,7 +16,6 @@ cpp! {{
 
     #include <QQuickView>
 }}
-
 
 // TODO
 #[repr(C)]
@@ -36,7 +34,6 @@ impl qt5qml::core::QObjectRef for QQuickView {
 }
 
 impl QQuickView {
-
     pub fn set_source(&mut self, url: &QUrl) {
         cpp!(unsafe [self as "QQuickView*", url as "const QUrl*"] {
             self->setSource(*url);

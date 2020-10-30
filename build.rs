@@ -1,5 +1,4 @@
 use qobject_compiler::moc::MocConfig;
-use qobject_compiler::typeref::TypeRefTrait;
 use qobject_compiler::{CcBuild, QObjectBuild, QObjectMethod, QObjectProp, QObjectSignal, TypeRef};
 use qt5qml::core::{QByteArray, QString};
 
@@ -37,6 +36,11 @@ fn main() {
                 .read("isActive")
                 .notify("activeChanged"),
         )
+        .property(
+            QObjectProp::new::<QString>("error")
+                .read("errorString")
+                .notify("error"),
+        )
         // username
         .method(QObjectMethod::new("username").const_().ret::<QString>())
         .method(QObjectMethod::new("setUsername").arg::<&QString>("value"))
@@ -46,6 +50,9 @@ fn main() {
         // active
         .method(QObjectMethod::new("isActive").const_().ret::<bool>())
         .signal(QObjectSignal::new("activeChanged").arg::<bool>("value"))
+        // error
+        .method(QObjectMethod::new("errorString").const_().ret::<QString>())
+        .signal(QObjectSignal::new("error").arg::<&QString>("message"))
         // slots
         .slot(QObjectMethod::new("start"))
         .slot(QObjectMethod::new("stop"))
@@ -56,5 +63,6 @@ fn main() {
     QObjectBuild::new("LibrespotGateway")
         .inherit(TypeRef::qobject())
         .signal(QObjectSignal::new("playerEvent").arg::<&QByteArray>("event"))
+        .qml(false)
         .build(&cpp, &moc);
 }
