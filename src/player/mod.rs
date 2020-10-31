@@ -18,9 +18,10 @@ use sha1::{Digest, Sha1};
 use tokio_core::reactor::Core;
 use url::Url;
 
-use crate::player::controller::{ControlMessage, Controller, LibrespotConfig};
+use crate::player::controller::{ControlMessage, LibrespotConfig, LibrespotController};
 use crate::player::error::{LibrespotError, LibrespotResult};
 use crate::player::qtgateway::LibrespotGateway;
+use crate::utils::xdg::config_home;
 use crate::utils::UnsafeSend;
 
 pub mod controller;
@@ -32,39 +33,40 @@ fn device_id(name: &str) -> String {
     hex::encode(Sha1::digest(name.as_bytes()))
 }
 
+#[derive(Clone)]
 pub struct Options {
-    cache: Option<PathBuf>,
-    audio_cache: bool,
-    device_name: String,
-    bitrate: Bitrate,
-    username: String,
-    password: String,
-    proxy: Option<String>,
-    ap_port: Option<u16>,
-    backend: Option<String>,
-    device: Option<String>,
-    mixer: Option<String>,
-    mixer_name: String,
-    mixer_card: String,
-    mixer_index: u32,
-    mixer_linear_volume: bool,
-    initial_volume: Option<u16>,
-    volume_normalisation: bool,
-    normalisation_pregain: Option<f32>,
-    volume_ctrl: VolumeCtrl,
-    autoplay: bool,
-    gapless: bool,
+    pub cache: PathBuf,
+    pub audio_cache: bool,
+    pub device_name: String,
+    pub bitrate: Bitrate,
+    pub username: Option<String>,
+    pub password: Option<String>,
+    pub proxy: Option<String>,
+    pub ap_port: Option<u16>,
+    pub backend: Option<String>,
+    pub device: Option<String>,
+    pub mixer: Option<String>,
+    pub mixer_name: String,
+    pub mixer_card: String,
+    pub mixer_index: u32,
+    pub mixer_linear_volume: bool,
+    pub initial_volume: Option<u16>,
+    pub volume_normalisation: bool,
+    pub normalisation_pregain: Option<f32>,
+    pub volume_ctrl: VolumeCtrl,
+    pub autoplay: bool,
+    pub gapless: bool,
 }
 
 impl Options {
     pub fn new() -> Self {
         Self {
-            cache: None,
+            cache: config_home().join("harbour-sailify").join("librespot"),
             audio_cache: true,
             device_name: "Sailify".to_string(),
             bitrate: Bitrate::default(),
-            username: "".to_string(),
-            password: "".to_string(),
+            username: None,
+            password: None,
             proxy: None,
             ap_port: None,
             backend: None,
@@ -91,9 +93,12 @@ fn setup(opts: Options) -> LibrespotResult<LibrespotConfig> {
         version::semver(),
     );
 
-    let backend = audio_backend::find(opts.backend).expect("Invalid backend");
+    let backend = audio_backend::find(opts.backend.clone()).ok_or_else(|| {
+        LibrespotError::IllegalConfig(format!("Invalid backend {:?}", &opts.backend))
+    })?;
 
-    let mixer = mixer::find(opts.mixer.as_ref()).expect("Invalid mixer");
+    let mixer = mixer::find(opts.mixer.as_ref())
+        .ok_or_else(|| LibrespotError::IllegalConfig(format!("Invalid mixer {:?}", &opts.mixer)))?;
 
     let mixer_config = MixerConfig {
         card: opts.mixer_card,
@@ -103,9 +108,7 @@ fn setup(opts: Options) -> LibrespotResult<LibrespotConfig> {
     };
 
     let audio_cache: bool = opts.audio_cache;
-    let cache = opts
-        .cache
-        .map(|cache_location| Cache::new(cache_location, audio_cache));
+    let cache = Cache::new(opts.cache, audio_cache);
 
     let initial_volume = opts
         .initial_volume
@@ -115,32 +118,18 @@ fn setup(opts: Options) -> LibrespotResult<LibrespotConfig> {
             }
             (volume as i32 * 0xFFFF / 100) as u16
         })
-        .or_else(|| cache.as_ref().and_then(Cache::volume))
+        .or_else(|| Cache::volume(&cache))
         .unwrap_or(0x8000);
 
-    //let cached_credentials = cache.as_ref().and_then(Cache::credentials);
-    let credentials = Credentials::with_password(opts.username, opts.password);
+    let credentials = match (opts.username, opts.password) {
+        (Some(username), Some(password)) => Credentials::with_password(username, password),
+        _ => Cache::credentials(&cache).ok_or(LibrespotError::MissingCredentials)?,
+    };
 
     let session_config = SessionConfig {
         user_agent: version::version_string(),
         device_id: device_id(&opts.device_name),
-        proxy: opts.proxy.or(std::env::var("http_proxy").ok()).map(
-            |s| {
-                match Url::parse(&s) {
-                    Ok(url) => {
-                        if url.host().is_none() || url.port_or_known_default().is_none() {
-                            panic!("Invalid proxy url, only urls on the format \"http://host:port\" are allowed");
-                        }
-
-                        if url.scheme() != "http" {
-                            panic!("Only unsecure http:// proxies are supported");
-                        }
-                        url
-                    },
-                    Err(err) => panic!("Invalid proxy url: {}, only urls on the format \"http://host:port\" are allowed", err)
-                }
-            },
-        ),
+        proxy: None,
         ap_port: opts.ap_port,
     };
 
@@ -189,7 +178,7 @@ impl LibrespotThread {
             .name("librespot".to_string())
             .spawn(move || {
                 let mut core = Core::new().unwrap();
-                let _ = core.run(Controller::new(
+                let _ = core.run(LibrespotController::new(
                     core.handle(),
                     control_rx,
                     unsafe { sendable_gateway.unwrap() },

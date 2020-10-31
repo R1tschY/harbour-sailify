@@ -30,6 +30,23 @@ Page {
             PageHeader {
                 title: qsTr("Sailify")
             }
+
+            DetailItem {
+                label: qsTr("Errors")
+                value: librespot.error
+            }
+
+            DetailItem {
+                label: qsTr("Active")
+                value: librespot.active
+            }
+        }
+    }
+
+    Component.onCompleted: {
+        if (!librespot.active && !librespot.error) {
+            // not started yet -> try to connect
+            librespot.start();
         }
     }
 }

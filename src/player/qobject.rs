@@ -1,6 +1,6 @@
 use std::ptr;
 
-use log::info;
+use log::{error, info};
 use qt5qml::core::{ConnectionTypeKind, QByteArray, QObject, QObjectRef, QString};
 use qt5qml::QBox;
 use qt5qml::{cstr, signal, slot};
@@ -8,6 +8,9 @@ use qt5qml::{cstr, signal, slot};
 use crate::player::error::LibrespotError;
 use crate::player::qtgateway::{deserialize_event, LibrespotGateway};
 use crate::player::{LibrespotThread, Options};
+use crate::utils::xdg::config_home;
+use crate::utils::{from_qstring, to_qstring};
+use std::path::PathBuf;
 
 include!(concat!(env!("OUT_DIR"), "/qffi_Librespot.rs"));
 
@@ -21,8 +24,7 @@ enum PlayerState {
 pub struct LibrespotPrivate {
     qobject: *mut Librespot,
     thread: Option<LibrespotThread>,
-    username: String,
-    password: String,
+    options: Options,
 
     last_error: Option<String>,
     state: PlayerState,
@@ -38,8 +40,7 @@ impl LibrespotPrivate {
         Self {
             qobject,
             thread: None,
-            username: "".to_string(),
-            password: "".to_string(),
+            options: Options::new(),
 
             last_error: None,
             state: PlayerState::Paused,
@@ -48,20 +49,20 @@ impl LibrespotPrivate {
     }
 
     pub fn username(&self) -> QString {
-        QString::from_utf8(&self.username)
+        to_qstring(self.options.username.as_ref())
     }
 
     pub fn set_username(&mut self, value: &QString) {
-        self.username = value.to_string();
+        self.options.username = from_qstring(value);
     }
 
     // #[property(write = set_password, notify = password_changed)]
     pub fn password(&self) -> QString {
-        QString::from_utf8(&self.password)
+        to_qstring(self.options.password.as_ref())
     }
 
     pub fn set_password(&mut self, value: &QString) {
-        self.password = value.to_string();
+        self.options.password = from_qstring(value);
     }
 
     // #[slot]
@@ -76,10 +77,6 @@ impl LibrespotPrivate {
             return;
         }
 
-        let mut opts = Options::new();
-        opts.username = self.username.clone();
-        opts.password = self.password.clone();
-
         let mut gateway: QBox<LibrespotGateway> = LibrespotGateway::new(ptr::null_mut());
         QObject::connect(
             gateway.as_qobject(),
@@ -90,7 +87,7 @@ impl LibrespotPrivate {
         );
         gateway.move_to_thread(None);
 
-        match LibrespotThread::run(gateway, opts) {
+        match LibrespotThread::run(gateway, self.options.clone()) {
             Ok(thread) => {
                 self.thread = Some(thread);
                 unsafe { &mut *self.qobject }.activeChanged(true);
@@ -125,17 +122,14 @@ impl LibrespotPrivate {
     // error
 
     pub fn error_string(&self) -> QString {
-        if let Some(ref error) = &self.last_error {
-            QString::from_utf8(error)
-        } else {
-            QString::new()
-        }
+        to_qstring(self.last_error.as_ref())
     }
 
     fn set_error(&mut self, err: LibrespotError) {
         let message = format!("{:?}", err);
         let qt_message = QString::from_utf8(&message);
 
+        error!("Librespot error: {}", message);
         self.last_error = Some(message);
         unsafe { &mut *self.qobject }.error(&qt_message);
     }

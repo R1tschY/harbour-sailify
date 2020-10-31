@@ -32,7 +32,7 @@ pub struct LibrespotConfig {
 
     pub mixer: fn(Option<MixerConfig>) -> Box<dyn Mixer>,
 
-    pub cache: Option<Cache>,
+    pub cache: Cache,
     pub player_config: PlayerConfig,
     pub session_config: SessionConfig,
     pub connect_config: ConnectConfig,
@@ -40,8 +40,8 @@ pub struct LibrespotConfig {
     pub credentials: Option<Credentials>,
 }
 
-pub struct Controller {
-    cache: Option<Cache>,
+pub struct LibrespotController {
+    cache: Cache,
     player_config: PlayerConfig,
     session_config: SessionConfig,
     connect_config: ConnectConfig,
@@ -65,14 +65,14 @@ pub struct Controller {
     gateway: QBox<LibrespotGateway>,
 }
 
-impl Controller {
+impl LibrespotController {
     pub fn new(
         handle: Handle,
         control_rx: UnboundedReceiver<ControlMessage>,
         gateway: QBox<LibrespotGateway>,
         setup: LibrespotConfig,
-    ) -> Controller {
-        let mut task = Controller {
+    ) -> LibrespotController {
+        let mut task = LibrespotController {
             handle: handle.clone(),
             cache: setup.cache,
             session_config: setup.session_config,
@@ -107,7 +107,7 @@ impl Controller {
         let config = self.session_config.clone();
         let handle = self.handle.clone();
 
-        let connection = Session::connect(config, credentials, self.cache.clone(), handle);
+        let connection = Session::connect(config, credentials, Some(self.cache.clone()), handle);
 
         self.connect = connection;
         self.spirc = None;
@@ -127,7 +127,7 @@ impl Controller {
     }
 }
 
-impl Future for Controller {
+impl Future for LibrespotController {
     type Item = ();
     type Error = ();
 
