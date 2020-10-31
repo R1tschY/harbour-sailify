@@ -6,19 +6,32 @@ use qt5qml::QBox;
 use qt5qml::{cstr, signal, slot};
 
 use crate::player::error::LibrespotError;
-use crate::player::qtgateway::{deserialize_event, LibrespotGateway};
+use crate::player::qtgateway::{deserialize_event, LibrespotEvent, LibrespotGateway};
 use crate::player::{LibrespotThread, Options};
 use crate::utils::xdg::config_home;
-use crate::utils::{from_qstring, to_qstring};
+use crate::utils::{from_qstring, to_qstring, ToQString};
 use std::path::PathBuf;
 
 include!(concat!(env!("OUT_DIR"), "/qffi_Librespot.rs"));
 
-enum PlayerState {
-    Disconnected,
-    Paused,
-    Playing,
-    Buffering,
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum PlayerStatus {
+    NoMedia = 0,
+    Loading = 1,
+    Loaded = 2,
+    Buffering = 3,
+    Stalled = 4,
+    Buffered = 5,
+    EndOfMedia = 6,
+    InvalidMedia = 7,
+    UnknownStatus = 8,
+}
+
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum ConnectionStatus {
+    Disconnected = 0,
+    Connecting = 1,
+    Connected = 2,
 }
 
 pub struct LibrespotPrivate {
@@ -27,8 +40,12 @@ pub struct LibrespotPrivate {
     options: Options,
 
     last_error: Option<String>,
-    state: PlayerState,
+    status: PlayerStatus,
+    connection: ConnectionStatus,
     track: Option<String>,
+    paused: bool,
+    position_ms: u32,
+    duration_ms: u32,
 }
 
 pub fn register_librespot() {
@@ -43,8 +60,12 @@ impl LibrespotPrivate {
             options: Options::new(),
 
             last_error: None,
-            state: PlayerState::Paused,
+            status: PlayerStatus::NoMedia,
+            connection: ConnectionStatus::Disconnected,
             track: None,
+            paused: false,
+            position_ms: 0,
+            duration_ms: 0,
         }
     }
 
@@ -69,6 +90,66 @@ impl LibrespotPrivate {
     pub fn on_player_event(&mut self, event: &QByteArray) {
         let evt = deserialize_event(event.as_slice());
         info!("GOT event: {:?}", evt);
+
+        match evt {
+            LibrespotEvent::Stopped { .. } => {
+                self.set_status(PlayerStatus::NoMedia);
+                self.set_track_uri(None);
+            }
+            LibrespotEvent::Changed { new_track_id } => {
+                self.set_track_uri(Some(new_track_id));
+            }
+            LibrespotEvent::Loading {
+                track_id,
+                position_ms,
+                ..
+            } => {
+                self.set_track_uri(Some(track_id));
+                self.set_status(PlayerStatus::Loading);
+                self.set_position(position_ms);
+            }
+            LibrespotEvent::Playing {
+                track_id,
+                position_ms,
+                duration_ms,
+                ..
+            } => {
+                self.set_track_uri(Some(track_id));
+                self.set_status(PlayerStatus::Loaded);
+                self.set_position(position_ms);
+                self.set_duration(duration_ms);
+                self.set_paused(false);
+            }
+            LibrespotEvent::Paused {
+                track_id,
+                position_ms,
+                duration_ms,
+                ..
+            } => {
+                self.set_track_uri(Some(track_id));
+                self.set_position(position_ms);
+                self.set_duration(duration_ms);
+                self.set_paused(true);
+            }
+            LibrespotEvent::Unavailable { track_id, .. } => {
+                self.set_track_uri(Some(track_id));
+                self.set_status(PlayerStatus::InvalidMedia);
+                self.set_position(0);
+                self.set_duration(0);
+            }
+            LibrespotEvent::VolumeSet { .. } => {}
+            LibrespotEvent::Connecting => self.set_connection_status(ConnectionStatus::Connecting),
+            LibrespotEvent::Connected => {
+                self.set_connection_status(ConnectionStatus::Connected);
+            }
+            LibrespotEvent::ConnectionError { message } => {
+                self.set_error(LibrespotError::Connection(message));
+            }
+            LibrespotEvent::Shutdown => {}
+            LibrespotEvent::StartReconnect => {
+                self.set_connection_status(ConnectionStatus::Connecting);
+            }
+        }
     }
 
     // #[slot]
@@ -107,6 +188,34 @@ impl LibrespotPrivate {
         unsafe { &mut *self.qobject }.activeChanged(false);
     }
 
+    // #[slot]
+    pub fn play(&mut self) {
+        if let Some(ref thread) = &self.thread {
+            thread.play()
+        }
+    }
+
+    // #[slot]
+    pub fn pause(&mut self) {
+        if let Some(ref thread) = &self.thread {
+            thread.pause()
+        }
+    }
+
+    // #[slot]
+    pub fn next(&mut self) {
+        if let Some(ref thread) = &self.thread {
+            thread.next()
+        }
+    }
+
+    // #[slot]
+    pub fn previous(&mut self) {
+        if let Some(ref thread) = &self.thread {
+            thread.previous()
+        }
+    }
+
     fn shutdown(&mut self) {
         if let Some(thread) = std::mem::replace(&mut self.thread, None) {
             thread.shutdown()
@@ -132,6 +241,90 @@ impl LibrespotPrivate {
         error!("Librespot error: {}", message);
         self.last_error = Some(message);
         unsafe { &mut *self.qobject }.error(&qt_message);
+    }
+
+    // status
+
+    pub fn status(&self) -> i32 {
+        self.status as i32
+    }
+
+    pub fn set_status(&mut self, status: PlayerStatus) {
+        if self.status != status {
+            self.status = status;
+
+            unsafe { &mut *self.qobject }.statusChanged(self.status as i32);
+        }
+    }
+
+    // connection status
+
+    pub fn connection_status(&self) -> i32 {
+        self.connection as i32
+    }
+
+    pub fn set_connection_status(&mut self, status: ConnectionStatus) {
+        if self.connection != status {
+            self.connection = status;
+
+            unsafe { &mut *self.qobject }.connectionStatusChanged(self.connection as i32);
+        }
+    }
+
+    // track uri
+
+    pub fn track_uri(&self) -> QString {
+        self.track.to_qstring()
+    }
+
+    pub fn set_track_uri(&mut self, uri: Option<String>) {
+        if self.track != uri {
+            self.track = uri;
+
+            unsafe { &mut *self.qobject }.trackUriChanged(&self.track.to_qstring());
+        }
+    }
+
+    // paused
+
+    pub fn paused(&self) -> bool {
+        self.paused
+    }
+
+    pub fn set_paused(&mut self, value: bool) {
+        if self.paused != value {
+            self.paused = value;
+
+            unsafe { &mut *self.qobject }.pausedChanged(value);
+        }
+    }
+
+    // position
+
+    pub fn position(&self) -> u32 {
+        self.position_ms
+    }
+
+    pub fn set_position(&mut self, value: u32) {
+        if self.position_ms != value {
+            self.position_ms = value;
+
+            unsafe { &mut *self.qobject }.positionChanged(value);
+        }
+    }
+
+    // duration
+
+    pub fn duration(&self) -> u32 {
+        self.duration_ms
+    }
+
+    pub fn set_duration(&mut self, value: u32) {
+        if self.duration_ms != value {
+            self.duration_ms = value;
+
+            unsafe { &mut *self.qobject }.durationChanged(value);
+        }
     }
 }
 

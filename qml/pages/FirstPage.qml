@@ -8,6 +8,8 @@ Page {
     // To enable PullDownMenu, place our content in a SilicaFlickable
     SilicaFlickable {
         anchors.fill: parent
+        contentWidth: parent.width
+        contentHeight: parent.height
 
         // PullDownMenu and PushUpMenu must be declared in SilicaFlickable, SilicaListView or SilicaGridView
         PullDownMenu {
@@ -17,12 +19,14 @@ Page {
             }
         }
 
-        contentHeight: column.height
-
         // Place our content in a Column.  The PageHeader is always placed at the top
         // of the page, followed by our content.
         Column {
             id: column
+
+            anchors {
+                top: parent.top
+            }
 
             width: page.width
             spacing: Theme.paddingLarge
@@ -32,13 +36,66 @@ Page {
             }
 
             DetailItem {
-                label: qsTr("Errors")
+                label: qsTr("Error")
                 value: librespot.error
             }
 
             DetailItem {
                 label: qsTr("Active")
                 value: librespot.active
+            }
+
+            DetailItem {
+                label: qsTr("Paused")
+                value: librespot.paused ? "paused" : "playing"
+            }
+
+            DetailItem {
+                label: qsTr("Position")
+                value: librespot.position
+            }
+
+            DetailItem {
+                label: qsTr("Duration")
+                value: librespot.duration
+            }
+
+            DetailItem {
+                label: qsTr("Track")
+                value: librespot.trackUri
+            }
+
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: Theme.paddingMedium
+
+                IconButton {
+                    anchors.verticalCenter: parent.verticalCenter
+                    icon.source: "image://theme/icon-m-previous"
+                    onClicked: librespot.previous()
+                }
+
+                IconButton {
+                    id: playPauseButton
+
+                    anchors.verticalCenter: parent.verticalCenter
+                    icon.source: librespot.paused ? "image://theme/icon-l-play"
+                                                  : "image://theme/icon-l-pause"
+
+                    onClicked: {
+                        if (librespot.paused) {
+                            librespot.play()
+                        } else {
+                            librespot.pause()
+                        }
+                    }
+                }
+
+                IconButton {
+                    anchors.verticalCenter: parent.verticalCenter
+                    icon.source: "image://theme/icon-m-next"
+                    onClicked: librespot.next()
+                }
             }
         }
     }

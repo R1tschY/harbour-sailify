@@ -200,4 +200,20 @@ impl LibrespotThread {
             self.handle.join().unwrap();
         }
     }
+
+    pub fn play(&self) {
+        let _ = self.control.unbounded_send(ControlMessage::Play);
+    }
+
+    pub fn pause(&self) {
+        let _ = self.control.unbounded_send(ControlMessage::Pause);
+    }
+
+    pub fn next(&self) {
+        let _ = self.control.unbounded_send(ControlMessage::Next);
+    }
+
+    pub fn previous(&self) {
+        let _ = self.control.unbounded_send(ControlMessage::Previous);
+    }
 }

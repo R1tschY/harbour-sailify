@@ -20,9 +20,13 @@ use tokio_core::reactor::Handle;
 
 use crate::player::qtgateway::{serialize_event, LibrespotEvent, LibrespotGateway};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ControlMessage {
     Shutdown,
+    Play,
+    Pause,
+    Next,
+    Previous,
 }
 
 #[derive(Clone)]
@@ -170,24 +174,29 @@ impl Future for LibrespotController {
             }
 
             if let Async::Ready(Some(msg)) = self.control_rx.poll().unwrap() {
-                match msg {
-                    ControlMessage::Shutdown => {
-                        if !self.shutdown {
-                            if let Some(ref spirc) = self.spirc {
-                                Self::send_gateway_event(
-                                    &mut self.gateway,
-                                    LibrespotEvent::Shutdown,
-                                );
-                                spirc.shutdown();
-                            } else {
-                                return Ok(Async::Ready(()));
-                            }
-                            self.shutdown = true;
+                if msg == ControlMessage::Shutdown {
+                    if !self.shutdown {
+                        if let Some(ref spirc) = self.spirc {
+                            Self::send_gateway_event(&mut self.gateway, LibrespotEvent::Shutdown);
+                            spirc.shutdown();
                         } else {
                             return Ok(Async::Ready(()));
                         }
+                        self.shutdown = true;
+                    } else {
+                        return Ok(Async::Ready(()));
                     }
-                };
+                } else if !self.shutdown {
+                    if let Some(ref spirc) = self.spirc {
+                        match msg {
+                            ControlMessage::Play => spirc.play(),
+                            ControlMessage::Next => spirc.next(),
+                            ControlMessage::Pause => spirc.pause(),
+                            ControlMessage::Previous => spirc.prev(),
+                            ControlMessage::Shutdown => unreachable!(),
+                        };
+                    }
+                }
 
                 progress = true;
             }

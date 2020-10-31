@@ -16,6 +16,10 @@ quick_error! {
             display("I/O error: {}", err)
             source(err)
         }
+
+        Connection(msg: String) {
+            display("Connection error: {}", msg)
+        }
     }
 }
 

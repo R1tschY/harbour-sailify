@@ -41,6 +41,36 @@ fn main() {
                 .read("errorString")
                 .notify("error"),
         )
+        .property(
+            QObjectProp::new::<i32>("status")
+                .read("status")
+                .notify("statusChanged"),
+        )
+        .property(
+            QObjectProp::new::<i32>("connectionStatus")
+                .read("connectionStatus")
+                .notify("connectionStatusChanged"),
+        )
+        .property(
+            QObjectProp::new::<QString>("trackUri")
+                .read("trackUri")
+                .notify("trackUriChanged"),
+        )
+        .property(
+            QObjectProp::new::<QString>("paused")
+                .read("paused")
+                .notify("pausedChanged"),
+        )
+        .property(
+            QObjectProp::new::<u32>("position")
+                .read("position")
+                .notify("positionChanged"),
+        )
+        .property(
+            QObjectProp::new::<u32>("duration")
+                .read("duration")
+                .notify("durationChanged"),
+        )
         // username
         .method(QObjectMethod::new("username").const_().ret::<QString>())
         .method(QObjectMethod::new("setUsername").arg::<&QString>("value"))
@@ -53,9 +83,31 @@ fn main() {
         // error
         .method(QObjectMethod::new("errorString").const_().ret::<QString>())
         .signal(QObjectSignal::new("error").arg::<&QString>("message"))
+        // status
+        .method(QObjectMethod::new("status").const_().ret::<i32>())
+        .signal(QObjectSignal::new("statusChanged").arg::<i32>("status"))
+        // connection status
+        .method(QObjectMethod::new("connectionStatus").const_().ret::<i32>())
+        .signal(QObjectSignal::new("connectionStatusChanged").arg::<i32>("status"))
+        // track uri
+        .method(QObjectMethod::new("trackUri").const_().ret::<QString>())
+        .signal(QObjectSignal::new("trackUriChanged").arg::<&QString>("value"))
+        // paused
+        .method(QObjectMethod::new("paused").const_().ret::<bool>())
+        .signal(QObjectSignal::new("pausedChanged").arg::<bool>("value"))
+        // position
+        .method(QObjectMethod::new("position").const_().ret::<u32>())
+        .signal(QObjectSignal::new("positionChanged").arg::<u32>("value"))
+        // duration
+        .method(QObjectMethod::new("duration").const_().ret::<u32>())
+        .signal(QObjectSignal::new("durationChanged").arg::<u32>("value"))
         // slots
         .slot(QObjectMethod::new("start"))
         .slot(QObjectMethod::new("stop"))
+        .slot(QObjectMethod::new("play"))
+        .slot(QObjectMethod::new("pause"))
+        .slot(QObjectMethod::new("next"))
+        .slot(QObjectMethod::new("previous"))
         // private slots
         .slot(QObjectMethod::new("_onPlayerEvent").arg::<&QByteArray>("event"))
         .build(&cpp, &moc);

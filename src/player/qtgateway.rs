@@ -9,11 +9,6 @@ pub enum LibrespotEvent {
         play_request_id: u64,
         track_id: String,
     },
-    Started {
-        play_request_id: u64,
-        track_id: String,
-        position_ms: u32,
-    },
     Changed {
         new_track_id: String,
     },
@@ -86,15 +81,6 @@ impl LibrespotEvent {
                 position_ms,
                 play_request_id,
                 duration_ms,
-            },
-            PlayerEvent::Started {
-                play_request_id,
-                position_ms,
-                track_id,
-            } => LibrespotEvent::Started {
-                play_request_id,
-                position_ms,
-                track_id: track_id.to_uri(),
             },
             PlayerEvent::Stopped {
                 play_request_id,
