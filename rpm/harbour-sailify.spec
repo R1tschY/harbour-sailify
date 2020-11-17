@@ -12,6 +12,7 @@ BuildRequires:  pkgconfig(Qt5Core)
 BuildRequires:  pkgconfig(Qt5Qml)
 BuildRequires:  pkgconfig(Qt5Quick)
 BuildRequires:  pkgconfig(libpulse)
+BuildRequires:  pkgconfig(openssl)
 BuildRequires:  desktop-file-utils
 BuildRequires:  rust
 BuildRequires:  cargo
@@ -31,25 +32,24 @@ export RPM_VERSION=%{version}
 
 # release
 #export CARGO_INCREMENTAL=0
-#cargo build -j1 --release --manifest-path %{_sourcedir}/../Cargo.toml
+#cargo build -j1 --release --target-dir=target --locked --manifest-path %{_sourcedir}/../Cargo.toml
 
 # debug
 export RUSTFLAGS="-Clink-arg=-Wl,-z,relro,-z,now -Ccodegen-units=1"
-cargo build -j1 --manifest-path %{_sourcedir}/../Cargo.toml
+cargo build -j1 --target-dir=target --locked --manifest-path %{_sourcedir}/../Cargo.toml
+
+touch Makefile
 
 # - INSTALL --------------------------------------------------------------------
 %install
 
 rm -rf %{buildroot}
-install -d %{buildroot}%{_datadir}/applications
 install -d %{buildroot}%{_datadir}/%{name}
-install -d %{buildroot}%{_datadir}/icons/hicolor/86x86/apps
-install -d %{buildroot}%{_bindir}
 
-install -m 755 target/debug/harbour-sailify %{buildroot}%{_bindir}/harbour-sailify
+install -Dm 755 target/debug/%{name} -t %{buildroot}%{_bindir}
 
-install harbour-sailify.png %{buildroot}%{_datadir}/icons/hicolor/86x86/apps
-install harbour-sailify.desktop %{buildroot}%{_datadir}/applications
+install -Dm 644 harbour-sailify.png -t %{buildroot}%{_datadir}/icons/hicolor/86x86/apps
+install -Dm 644 harbour-sailify.desktop -t %{buildroot}%{_datadir}/applications
 cp -r qml %{buildroot}%{_datadir}/%{name}/qml
 
 desktop-file-install --delete-original       \
