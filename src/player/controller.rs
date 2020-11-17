@@ -18,7 +18,7 @@ use qt5qml::core::QByteArray;
 use qt5qml::QBox;
 use tokio_core::reactor::Handle;
 
-use crate::player::qtgateway::{serialize_event, LibrespotEvent, LibrespotGateway};
+use crate::player::qtgateway::{LibrespotEvent, LibrespotGateway};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ControlMessage {
@@ -66,14 +66,14 @@ pub struct LibrespotController {
     auto_connect_times: Vec<Instant>,
 
     player_event_channel: Option<UnboundedReceiver<PlayerEvent>>,
-    gateway: QBox<LibrespotGateway>,
+    gateway: LibrespotGateway,
 }
 
 impl LibrespotController {
     pub fn new(
         handle: Handle,
         control_rx: UnboundedReceiver<ControlMessage>,
-        gateway: QBox<LibrespotGateway>,
+        gateway: LibrespotGateway,
         setup: LibrespotConfig,
     ) -> LibrespotController {
         let mut task = LibrespotController {
@@ -127,7 +127,7 @@ impl LibrespotController {
     }
 
     fn send_gateway_event(gateway: &mut LibrespotGateway, evt: LibrespotEvent) {
-        gateway.playerEvent(&QByteArray::from_bytes(&serialize_event(evt)));
+        gateway.send(evt);
     }
 }
 

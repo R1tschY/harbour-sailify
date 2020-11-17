@@ -57,7 +57,7 @@ fn main() {
                 .notify("trackUriChanged"),
         )
         .property(
-            QObjectProp::new::<QString>("paused")
+            QObjectProp::new::<bool>("paused")
                 .read("paused")
                 .notify("pausedChanged"),
         )
@@ -109,12 +109,12 @@ fn main() {
         .slot(QObjectMethod::new("next"))
         .slot(QObjectMethod::new("previous"))
         // private slots
-        .slot(QObjectMethod::new("_onPlayerEvent").arg::<&QByteArray>("event"))
+        .slot(QObjectMethod::new("_onPlayerEvent"))
         .build(&cpp, &moc);
 
     QObjectBuild::new("LibrespotGateway")
         .inherit(TypeRef::qobject())
-        .signal(QObjectSignal::new("playerEvent").arg::<&QByteArray>("event"))
+        .signal(QObjectSignal::new("playerEvent"))
         .qml(false)
         .build(&cpp, &moc);
 }

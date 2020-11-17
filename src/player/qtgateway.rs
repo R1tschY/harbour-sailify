@@ -1,9 +1,12 @@
+use std::sync::mpsc;
+
 use librespot::playback::player::PlayerEvent;
-use serde::{Deserialize, Serialize};
+use log::warn;
+use qt5qml::core::{ConnectionTypeKind, QMetaObject, QObject, QObjectRef};
+use qt5qml::{cstr, signal, slot, QBox};
+use std::ptr;
 
-include!(concat!(env!("OUT_DIR"), "/qffi_LibrespotGateway.rs"));
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub enum LibrespotEvent {
     Stopped {
         play_request_id: u64,
@@ -102,20 +105,46 @@ impl LibrespotEvent {
     }
 }
 
-pub fn serialize_event(evt: LibrespotEvent) -> Vec<u8> {
-    bincode::serialize(&evt).unwrap()
+mod details {
+    use super::*;
+
+    include!(concat!(env!("OUT_DIR"), "/qffi_LibrespotGateway.rs"));
+
+    pub struct LibrespotGatewayPrivate;
+
+    impl LibrespotGatewayPrivate {
+        pub fn new(_: *mut LibrespotGateway) -> Self {
+            Self
+        }
+    }
 }
 
-pub fn deserialize_event(evt: &[u8]) -> LibrespotEvent {
-    bincode::deserialize(&evt).unwrap()
+pub struct LibrespotGateway {
+    qobject: QBox<details::LibrespotGateway>,
+    tx: mpsc::Sender<LibrespotEvent>,
 }
 
-pub struct LibrespotGatewayPrivate {
-    _qobject: *mut LibrespotGateway,
-}
+impl LibrespotGateway {
+    pub fn new(parent: &QObject, tx: mpsc::Sender<LibrespotEvent>) -> Self {
+        let mut qobject = details::LibrespotGateway::new(ptr::null_mut());
 
-impl LibrespotGatewayPrivate {
-    pub fn new(qobject: *mut LibrespotGateway) -> Self {
-        Self { _qobject: qobject }
+        QObject::connect(
+            qobject.as_qobject(),
+            signal!("playerEvent()"),
+            parent,
+            slot!("_onPlayerEvent()"),
+            ConnectionTypeKind::Queued,
+        );
+        qobject.move_to_thread(None);
+
+        Self { qobject, tx }
+    }
+
+    pub fn send(&mut self, evt: LibrespotEvent) {
+        if let Err(_) = self.tx.send(evt) {
+            warn!("Failed to send librespot event to qt thread");
+        } else {
+            self.qobject.playerEvent();
+        }
     }
 }

@@ -19,19 +19,18 @@ url = "1.7"
 hex = "0.3"
 
 # lib
-serde = { version = "^1.0.117", features = ["derive"] }
-bincode = "^1.3.1"
 quick-error = "2"
+reqwest = "^0.9.24"
 
 # rust app
 log = "0.4"
 env_logger =  { version = "^0.8.1", default-features = false, features = ["termcolor", "atty"]}
 
 # qt app
-qt5qml = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "3a44ceed" }
+qt5qml = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "e537ce91" }
 sailfishapp = { path = "sailfishapp" }
 
 [build-dependencies]
-qobject-compiler = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "3a44ceed"}
-qt5qml = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "3a44ceed"}
+qobject-compiler = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "e537ce91"}
+qt5qml = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "e537ce91"}
 pkg-config = "0.3"

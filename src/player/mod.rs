@@ -169,7 +169,7 @@ pub struct LibrespotThread {
 }
 
 impl LibrespotThread {
-    pub fn run(gateway: QBox<LibrespotGateway>, options: Options) -> LibrespotResult<Self> {
+    pub fn run(gateway: LibrespotGateway, options: Options) -> LibrespotResult<Self> {
         let sendable_gateway = UnsafeSend::new(gateway);
         let setup = setup(options)?;
 

@@ -1,16 +1,20 @@
+use std::path::PathBuf;
 use std::ptr;
+use std::sync::mpsc;
+use std::sync::mpsc::{channel, TryRecvError};
 
-use log::{error, info};
+use librespot::playback::player::PlayerEvent;
+use log::{error, info, warn};
+use qt5qml::core::ToQString;
 use qt5qml::core::{ConnectionTypeKind, QByteArray, QObject, QObjectRef, QString};
 use qt5qml::QBox;
 use qt5qml::{cstr, signal, slot};
 
 use crate::player::error::LibrespotError;
-use crate::player::qtgateway::{deserialize_event, LibrespotEvent, LibrespotGateway};
+use crate::player::qtgateway::{LibrespotEvent, LibrespotGateway};
 use crate::player::{LibrespotThread, Options};
+use crate::utils::from_qstring;
 use crate::utils::xdg::config_home;
-use crate::utils::{from_qstring, to_qstring, ToQString};
-use std::path::PathBuf;
 
 include!(concat!(env!("OUT_DIR"), "/qffi_Librespot.rs"));
 
@@ -36,6 +40,8 @@ pub enum ConnectionStatus {
 
 pub struct LibrespotPrivate {
     qobject: *mut Librespot,
+    qt_tx: mpsc::Sender<LibrespotEvent>,
+    qt_rx: mpsc::Receiver<LibrespotEvent>,
     thread: Option<LibrespotThread>,
     options: Options,
 
@@ -54,8 +60,11 @@ pub fn register_librespot() {
 
 impl LibrespotPrivate {
     pub fn new(qobject: *mut Librespot) -> Self {
+        let (qt_tx, qt_rx) = channel();
         Self {
             qobject,
+            qt_tx,
+            qt_rx,
             thread: None,
             options: Options::new(),
 
@@ -70,7 +79,7 @@ impl LibrespotPrivate {
     }
 
     pub fn username(&self) -> QString {
-        to_qstring(self.options.username.as_ref())
+        self.options.username.to_qstring()
     }
 
     pub fn set_username(&mut self, value: &QString) {
@@ -79,7 +88,7 @@ impl LibrespotPrivate {
 
     // #[property(write = set_password, notify = password_changed)]
     pub fn password(&self) -> QString {
-        to_qstring(self.options.password.as_ref())
+        self.options.password.to_qstring()
     }
 
     pub fn set_password(&mut self, value: &QString) {
@@ -87,8 +96,17 @@ impl LibrespotPrivate {
     }
 
     // #[slot]
-    pub fn on_player_event(&mut self, event: &QByteArray) {
-        let evt = deserialize_event(event.as_slice());
+    pub fn on_player_event(&mut self) {
+        let evt = match self.qt_rx.try_recv() {
+            Ok(evt) => evt,
+            Err(TryRecvError::Empty) => {
+                return warn!("Empty queue but expected event");
+            }
+            Err(TryRecvError::Disconnected) => {
+                return warn!("Queue disconnected");
+            }
+        };
+
         info!("GOT event: {:?}", evt);
 
         match evt {
@@ -144,6 +162,7 @@ impl LibrespotPrivate {
             }
             LibrespotEvent::ConnectionError { message } => {
                 self.set_error(LibrespotError::Connection(message));
+                self.set_connection_status(ConnectionStatus::Disconnected);
             }
             LibrespotEvent::Shutdown => {}
             LibrespotEvent::StartReconnect => {
@@ -158,15 +177,10 @@ impl LibrespotPrivate {
             return;
         }
 
-        let mut gateway: QBox<LibrespotGateway> = LibrespotGateway::new(ptr::null_mut());
-        QObject::connect(
-            gateway.as_qobject(),
-            signal!("playerEvent(const QByteArray&)"),
+        let mut gateway: LibrespotGateway = LibrespotGateway::new(
             unsafe { &mut *self.qobject }.as_qobject(),
-            slot!("_onPlayerEvent(const QByteArray&)"),
-            ConnectionTypeKind::Queued,
+            self.qt_tx.clone(),
         );
-        gateway.move_to_thread(None);
 
         match LibrespotThread::run(gateway, self.options.clone()) {
             Ok(thread) => {
@@ -231,7 +245,7 @@ impl LibrespotPrivate {
     // error
 
     pub fn error_string(&self) -> QString {
-        to_qstring(self.last_error.as_ref())
+        self.last_error.to_qstring()
     }
 
     fn set_error(&mut self, err: LibrespotError) {
