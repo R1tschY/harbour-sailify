@@ -5,22 +5,11 @@ import Sailfish.Silica 1.0
 Page {
     id: page
 
-    // To enable PullDownMenu, place our content in a SilicaFlickable
     SilicaFlickable {
         anchors.fill: parent
         contentWidth: parent.width
         contentHeight: parent.height
 
-        // PullDownMenu and PushUpMenu must be declared in SilicaFlickable, SilicaListView or SilicaGridView
-        PullDownMenu {
-            MenuItem {
-                text: qsTr("Configure librespot device")
-                onClicked: pageStack.push(Qt.resolvedUrl("SecondPage.qml"))
-            }
-        }
-
-        // Place our content in a Column.  The PageHeader is always placed at the top
-        // of the page, followed by our content.
         Column {
             id: column
 
@@ -97,13 +86,6 @@ Page {
                     onClicked: librespot.next()
                 }
             }
-        }
-    }
-
-    Component.onCompleted: {
-        if (!librespot.active && !librespot.error) {
-            // not started yet -> try to connect
-            librespot.start();
         }
     }
 }

@@ -1,0 +1,83 @@
+import QtQuick 2.0
+import Sailfish.Silica 1.0
+
+Page {
+    id: page
+
+    Component.onCompleted: {
+        switch (librespot.connectionStatus) {
+        case 0: // disconnected
+            librespot.start();
+            break;
+        case 1: // connecting
+            progressLabel.text = qsTr("Logging in …")
+            break;
+        case 2: // connected
+            pageStack.completeAnimation()
+            pageStack.replaceAbove(null, Qt.resolvedUrl("CurrentlyPlayingPage.qml"))
+            break;
+        }
+    }
+
+    Connections {
+        target: librespot
+
+        onConnectionStatusChanged: {
+            switch (librespot.connectionStatus) {
+            case 0: // disconnected
+                onError(librespot.error || "Unknown error")
+                break;
+            case 1: // connecting
+                progressLabel.text = qsTr("Logging in …")
+                break;
+            case 2: // connected
+                pageStack.completeAnimation()
+                pageStack.replaceAbove(null, Qt.resolvedUrl("CurrentlyPlayingPage.qml"))
+                break;
+            }
+        }
+    }
+
+    function onError(error) {
+        pageStack.completeAnimation()
+
+        if (pageStack.depth > 1) {
+            pageStack.replace(Qt.resolvedUrl("ErrorPage.qml"), {
+                "header": qsTr("Login Error"),
+                "text": error
+            }, PageStackAction.Immediate)
+        } else {
+            var pages = [{
+                "page": Qt.resolvedUrl("LoginPage.qml"),
+            }, {
+                "page": Qt.resolvedUrl("ErrorPage.qml"),
+                "properties": {
+                    "header": qsTr("Login Error"),
+                    "text": error
+                }
+            }]
+            pageStack.replaceAbove(null, pages, {}, PageStackAction.Immediate)
+        }
+    }
+
+    PageBusyIndicator {
+        id: busyIndicator
+        running: true
+        anchors {
+            verticalCenter: parent.verticalCenter
+            horizontalCenter: parent.horizontalCenter
+        }
+    }
+
+    Label {
+        id: progressLabel
+        width: page.width
+        text: qsTr("Preparing …")
+        anchors.top: busyIndicator.bottom
+        anchors.topMargin: Theme.paddingMedium
+        horizontalAlignment: Text.AlignHCenter
+        wrapMode: Text.WordWrap
+        color: Theme.secondaryHighlightColor
+        font.pixelSize: Theme.fontSizeLarge
+    }
+}
