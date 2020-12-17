@@ -29,14 +29,14 @@ A Spotify client for Sailfish OS focused on usability and stability.
 %build
 
 export RPM_VERSION=%{version}
+export RUSTFLAGS="-Clink-arg=-Wl,-z,relro,-z,now -Ccodegen-units=1"
 
 # release
-#export CARGO_INCREMENTAL=0
-#cargo build -j1 --release --target-dir=target --locked --manifest-path %{_sourcedir}/../Cargo.toml
+export CARGO_INCREMENTAL=0
+cargo build -j1 --release --target-dir=target --locked --manifest-path %{_sourcedir}/../Cargo.toml
 
 # debug
-export RUSTFLAGS="-Clink-arg=-Wl,-z,relro,-z,now -Ccodegen-units=1"
-cargo build -j1 --target-dir=target --locked --manifest-path %{_sourcedir}/../Cargo.toml
+#cargo build -j1 --target-dir=target --locked --manifest-path %{_sourcedir}/../Cargo.toml
 
 touch Makefile
 
@@ -46,7 +46,7 @@ touch Makefile
 rm -rf %{buildroot}
 install -d %{buildroot}%{_datadir}/%{name}
 
-install -Dm 755 target/debug/%{name} -t %{buildroot}%{_bindir}
+install -Dm 755 target/release/%{name} -t %{buildroot}%{_bindir}
 
 install -Dm 644 harbour-sailify.png -t %{buildroot}%{_datadir}/icons/hicolor/86x86/apps
 install -Dm 644 harbour-sailify.desktop -t %{buildroot}%{_datadir}/applications
