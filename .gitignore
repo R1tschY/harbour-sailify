@@ -4,6 +4,7 @@
 /rpmbuildroot
 /.cargo*
 
+*~
 *.list
 
 # Qt Creator
