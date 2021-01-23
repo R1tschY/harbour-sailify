@@ -48,9 +48,9 @@ install -d %{buildroot}%{_datadir}/%{name}
 
 install -Dm 755 target/release/%{name} -t %{buildroot}%{_bindir}
 
-install -Dm 644 harbour-sailify.png -t %{buildroot}%{_datadir}/icons/hicolor/86x86/apps
-install -Dm 644 harbour-sailify.desktop -t %{buildroot}%{_datadir}/applications
-cp -r qml %{buildroot}%{_datadir}/%{name}/qml
+install -Dm 644 %{_sourcedir}/../harbour-sailify.png -t %{buildroot}%{_datadir}/icons/hicolor/86x86/apps
+install -Dm 644 %{_sourcedir}/../harbour-sailify.desktop -t %{buildroot}%{_datadir}/applications
+cp -r %{_sourcedir}/../qml %{buildroot}%{_datadir}/%{name}/qml
 
 desktop-file-install --delete-original       \
   --dir %{buildroot}%{_datadir}/applications             \
