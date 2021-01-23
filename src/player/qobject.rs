@@ -14,7 +14,7 @@ use crate::player::error::LibrespotError;
 use crate::player::qtgateway::{LibrespotEvent, LibrespotGateway};
 use crate::player::{LibrespotThread, Options};
 use crate::utils::from_qstring;
-use crate::utils::xdg::config_home;
+use std::error::Error;
 
 include!(concat!(env!("OUT_DIR"), "/qffi_Librespot.rs"));
 
@@ -45,7 +45,9 @@ pub struct LibrespotPrivate {
     thread: Option<LibrespotThread>,
     options: Options,
 
-    last_error: Option<String>,
+    error_kind: Option<String>,
+    error_string: Option<String>,
+
     status: PlayerStatus,
     connection: ConnectionStatus,
     track: Option<String>,
@@ -68,7 +70,8 @@ impl LibrespotPrivate {
             thread: None,
             options: Options::new(),
 
-            last_error: None,
+            error_kind: None,
+            error_string: None,
             status: PlayerStatus::NoMedia,
             connection: ConnectionStatus::Disconnected,
             track: None,
@@ -162,9 +165,13 @@ impl LibrespotPrivate {
             }
             LibrespotEvent::ConnectionError { message } => {
                 self.set_error(LibrespotError::Connection(message));
-                self.set_connection_status(ConnectionStatus::Disconnected);
+                self.shutdown();
             }
-            LibrespotEvent::Shutdown => {}
+            LibrespotEvent::Shutdown => {
+                self.set_connection_status(ConnectionStatus::Disconnected);
+                self.set_status(PlayerStatus::NoMedia);
+                self.thread = None;
+            }
             LibrespotEvent::StartReconnect => {
                 self.set_connection_status(ConnectionStatus::Connecting);
             }
@@ -172,10 +179,13 @@ impl LibrespotPrivate {
     }
 
     // #[slot]
-    pub fn start(&mut self) {
+    pub fn login(&mut self) {
         if self.is_active() {
+            warn!("Already logged in");
             return;
         }
+
+        info!("Logging in ...");
 
         let mut gateway: LibrespotGateway = LibrespotGateway::new(
             unsafe { &mut *self.qobject }.as_qobject(),
@@ -192,12 +202,29 @@ impl LibrespotPrivate {
     }
 
     // #[slot]
-    pub fn stop(&mut self) {
+    pub fn logout(&mut self) {
+        if !self.is_active() {
+            warn!("Logout not possible: librespot is shutdown");
+            return;
+        }
+
+        info!("Logging out ...");
+
+        self.shutdown();
+        LibrespotThread::remove_credentials(&self.options);
+    }
+
+    // #[slot]
+    pub fn shutdown(&mut self) {
         if !self.is_active() {
             return;
         }
 
-        self.shutdown();
+        info!("Shutting down ...");
+
+        self.shutdown_thread();
+        self.set_connection_status(ConnectionStatus::Disconnected);
+        self.set_status(PlayerStatus::NoMedia);
 
         unsafe { &mut *self.qobject }.activeChanged(false);
     }
@@ -230,7 +257,7 @@ impl LibrespotPrivate {
         }
     }
 
-    fn shutdown(&mut self) {
+    fn shutdown_thread(&mut self) {
         if let Some(thread) = std::mem::replace(&mut self.thread, None) {
             thread.shutdown()
         }
@@ -244,17 +271,23 @@ impl LibrespotPrivate {
 
     // error
 
+    pub fn error_kind(&self) -> QString {
+        self.error_kind.to_qstring()
+    }
+
     pub fn error_string(&self) -> QString {
-        self.last_error.to_qstring()
+        self.error_string.to_qstring()
     }
 
     fn set_error(&mut self, err: LibrespotError) {
-        let message = format!("{:?}", err);
-        let qt_message = QString::from_utf8(&message);
+        let message = format!("{}", &err);
+        let kind = format!("{:?}", &err);
 
-        error!("Librespot error: {}", message);
-        self.last_error = Some(message);
-        unsafe { &mut *self.qobject }.error(&qt_message);
+        error!("Librespot error: {}", &message);
+        self.error_kind = Some(kind);
+        self.error_string = Some(message);
+
+        unsafe { &mut *self.qobject }.errorOccurred();
     }
 
     // status
@@ -344,6 +377,6 @@ impl LibrespotPrivate {
 
 impl Drop for LibrespotPrivate {
     fn drop(&mut self) {
-        self.shutdown()
+        self.shutdown_thread()
     }
 }

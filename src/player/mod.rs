@@ -1,4 +1,6 @@
 use std::env;
+use std::fs;
+use std::io;
 use std::path::PathBuf;
 use std::thread;
 use std::thread::JoinHandle;
@@ -12,7 +14,7 @@ use librespot::core::version;
 use librespot::playback::audio_backend;
 use librespot::playback::config::{Bitrate, PlayerConfig};
 use librespot::playback::mixer::{self, Mixer, MixerConfig};
-use log::{info, warn};
+use log::{error, info, warn};
 use qt5qml::QBox;
 use sha1::{Digest, Sha1};
 use tokio_core::reactor::Core;
@@ -21,8 +23,7 @@ use url::Url;
 use crate::player::controller::{ControlMessage, LibrespotConfig, LibrespotController};
 use crate::player::error::{LibrespotError, LibrespotResult};
 use crate::player::qtgateway::LibrespotGateway;
-use crate::utils::xdg::config_home;
-use crate::utils::UnsafeSend;
+use crate::utils::{xdg, UnsafeSend};
 
 pub mod controller;
 pub mod error;
@@ -61,7 +62,7 @@ pub struct Options {
 impl Options {
     pub fn new() -> Self {
         Self {
-            cache: config_home().join("harbour-sailify").join("librespot"),
+            cache: xdg::config_home().join("harbour-sailify").join("librespot"),
             audio_cache: true,
             device_name: "Sailify".to_string(),
             bitrate: Bitrate::default(),
@@ -123,7 +124,9 @@ fn setup(opts: Options) -> LibrespotResult<LibrespotConfig> {
 
     let credentials = match (opts.username, opts.password) {
         (Some(username), Some(password)) => Credentials::with_password(username, password),
-        _ => Cache::credentials(&cache).ok_or(LibrespotError::MissingCredentials)?,
+        _ => cache
+            .credentials()
+            .ok_or(LibrespotError::MissingCredentials)?,
     };
 
     let session_config = SessionConfig {
@@ -169,6 +172,15 @@ pub struct LibrespotThread {
 }
 
 impl LibrespotThread {
+    pub fn remove_credentials(opts: &Options) {
+        match fs::remove_file(opts.cache.join("credentials.json")) {
+            Ok(_) => (),
+            Err(err) if err.kind() == io::ErrorKind::NotFound => (),
+            // TODO: what should we do?
+            Err(err) => error!("Failed to remove credentials: {:?}", err),
+        };
+    }
+
     pub fn run(gateway: LibrespotGateway, options: Options) -> LibrespotResult<Self> {
         let sendable_gateway = UnsafeSend::new(gateway);
         let setup = setup(options)?;

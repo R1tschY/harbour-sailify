@@ -30,6 +30,7 @@ Page {
                     left: parent.left
                     leftMargin: Theme.horizontalPageMargin
                 }
+                text: librespot.errorString
 
                 color: Theme.secondaryHighlightColor
                 wrapMode: Text.WordWrap

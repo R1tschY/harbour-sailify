@@ -7,14 +7,13 @@ Page {
     Component.onCompleted: {
         switch (librespot.connectionStatus) {
         case 0: // disconnected
-            librespot.start();
+            librespot.login();
             break;
         case 1: // connecting
             progressLabel.text = qsTr("Logging in …")
             break;
         case 2: // connected
-            pageStack.completeAnimation()
-            pageStack.replaceAbove(null, Qt.resolvedUrl("CurrentlyPlayingPage.qml"))
+            onComplete()
             break;
         }
     }
@@ -22,20 +21,31 @@ Page {
     Connections {
         target: librespot
 
-        onConnectionStatusChanged: {
+        onConnectionStatusChanged: onComplete()
+        onErrorOccurred: onComplete()
+    }
+
+    Timer {
+        id: changeTimer
+        interval: 500
+        onTriggered: {
             switch (librespot.connectionStatus) {
             case 0: // disconnected
-                onError(librespot.error || "Unknown error")
+                onError(librespot.error || "Unknown")
                 break;
             case 1: // connecting
                 progressLabel.text = qsTr("Logging in …")
                 break;
             case 2: // connected
-                pageStack.completeAnimation()
                 pageStack.replaceAbove(null, Qt.resolvedUrl("CurrentlyPlayingPage.qml"))
                 break;
             }
         }
+    }
+
+    function onComplete() {
+        pageStack.completeAnimation()
+        changeTimer.start()
     }
 
     function onError(error) {
@@ -49,13 +59,17 @@ Page {
         } else {
             var pages = [{
                 "page": Qt.resolvedUrl("LoginPage.qml"),
-            }, {
-                "page": Qt.resolvedUrl("ErrorPage.qml"),
-                "properties": {
-                    "header": qsTr("Login Error"),
-                    "text": error
-                }
             }]
+
+            if (librespot.errorKind !== "MissingCredentials") {
+                pages.push({
+                    "page": Qt.resolvedUrl("ErrorPage.qml"),
+                    "properties": {
+                        "header": qsTr("Login Error"),
+                        "text": error
+                    }
+                })
+            }
             pageStack.replaceAbove(null, pages, {}, PageStackAction.Immediate)
         }
     }

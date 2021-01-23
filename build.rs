@@ -37,9 +37,14 @@ fn main() {
                 .notify("activeChanged"),
         )
         .property(
-            QObjectProp::new::<QString>("error")
+            QObjectProp::new::<QString>("errorString")
                 .read("errorString")
-                .notify("error"),
+                .notify("errorOccurred"),
+        )
+        .property(
+            QObjectProp::new::<QString>("errorKind")
+                .read("errorKind")
+                .notify("errorOccurred"),
         )
         .property(
             QObjectProp::new::<i32>("status")
@@ -82,7 +87,8 @@ fn main() {
         .signal(QObjectSignal::new("activeChanged").arg::<bool>("value"))
         // error
         .method(QObjectMethod::new("errorString").const_().ret::<QString>())
-        .signal(QObjectSignal::new("error").arg::<&QString>("message"))
+        .method(QObjectMethod::new("errorKind").const_().ret::<QString>())
+        .signal(QObjectSignal::new("errorOccurred"))
         // status
         .method(QObjectMethod::new("status").const_().ret::<i32>())
         .signal(QObjectSignal::new("statusChanged").arg::<i32>("status"))
@@ -102,8 +108,9 @@ fn main() {
         .method(QObjectMethod::new("duration").const_().ret::<u32>())
         .signal(QObjectSignal::new("durationChanged").arg::<u32>("value"))
         // slots
-        .slot(QObjectMethod::new("start"))
-        .slot(QObjectMethod::new("stop"))
+        .slot(QObjectMethod::new("login"))
+        .slot(QObjectMethod::new("logout"))
+        .slot(QObjectMethod::new("shutdown"))
         .slot(QObjectMethod::new("play"))
         .slot(QObjectMethod::new("pause"))
         .slot(QObjectMethod::new("next"))

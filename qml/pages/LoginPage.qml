@@ -5,10 +5,20 @@ Page {
     id: page
     allowedOrientations: Orientation.All
 
-    function login(user, pass, server) {
+    function login(user, pass) {
         librespot.username = usernameField.text
         librespot.password = passwordField.text
         pageStack.push(Qt.resolvedUrl("LoginProgressPage.qml"))
+    }
+
+    Connections {
+        target: pageStack
+
+        onCurrentPageChanged: {
+            if (pageStack.currentPage === page) {
+                librespot.logout()
+            }
+        }
     }
 
     SilicaFlickable {
@@ -21,19 +31,19 @@ Page {
             spacing: Theme.paddingLarge
 
             PageHeader {
-                title: qsTr("Matrix Login")
+                title: qsTr("Spotify Login")
             }
 
-//            Image {
-//                id: logo
-//                source: "qrc:det/icons/matrix-logo.svg"
-//                y: Theme.paddingMedium
-//                height: Theme.itemSizeExtraLarge
-//                width: parent.width
+            Image {
+                id: logo
+                source: "https://storage.googleapis.com/pr-newsroom-wp/1/2018/11/Spotify_Logo_RGB_Green.png"
+                y: Theme.paddingMedium
+                height: Theme.itemSizeExtraLarge
+                width: parent.width
 
-//                fillMode: Image.PreserveAspectFit
-//                asynchronous: true
-//            }
+                fillMode: Image.PreserveAspectFit
+                asynchronous: true
+            }
 
             TextField {
                 id: usernameField
@@ -56,8 +66,7 @@ Page {
                 EnterKey.onClicked:
                     login(
                         usernameField.text,
-                        passwordField.text,
-                        serverField.text)
+                        passwordField.text)
             }
         }
 

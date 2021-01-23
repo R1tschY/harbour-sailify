@@ -26,7 +26,7 @@ Page {
 
             DetailItem {
                 label: qsTr("Error")
-                value: librespot.error
+                value: librespot.errorString
             }
 
             DetailItem {
@@ -84,6 +84,16 @@ Page {
                     anchors.verticalCenter: parent.verticalCenter
                     icon.source: "image://theme/icon-m-next"
                     onClicked: librespot.next()
+                }
+            }
+        }
+
+        PullDownMenu {
+            MenuItem {
+                text: qsTr("Logout")
+                onClicked: {
+                    librespot.logout()
+                    pageStack.replaceAbove(null, Qt.resolvedUrl("LoginPage.qml"))
                 }
             }
         }

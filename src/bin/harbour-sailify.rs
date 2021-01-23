@@ -1,8 +1,10 @@
+use std::{env, fs, io};
+
 use qt5qml::core::QApplicationFactory;
 use sailfishapp::SailfishApp;
+
 use sailify::player::qobject::register_librespot;
-use sailify::utils::xdg::config_home;
-use std::{env, fs, io};
+use sailify::utils::xdg;
 
 fn setup_logging() {
     let rust_log =
@@ -12,7 +14,7 @@ fn setup_logging() {
 }
 
 fn create_config_dir() {
-    if let Err(err) = fs::create_dir(config_home().join("harbour-sailify")) {
+    if let Err(err) = fs::create_dir(xdg::config_home().join("harbour-sailify")) {
         if err.kind() != io::ErrorKind::AlreadyExists {
             panic!("Failed to create config dir: {:?}", err);
         }
