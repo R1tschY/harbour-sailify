@@ -33,10 +33,10 @@ export RUSTFLAGS="-Clink-arg=-Wl,-z,relro,-z,now -Ccodegen-units=1"
 
 # release
 export CARGO_INCREMENTAL=0
-cargo build -j1 --release --target-dir=target --locked --manifest-path %{_sourcedir}/../Cargo.toml
+cargo build --release --target-dir=target --locked --manifest-path %{_sourcedir}/../Cargo.toml
 
 # debug
-#cargo build -j1 --target-dir=target --locked --manifest-path %{_sourcedir}/../Cargo.toml
+#cargo build --target-dir=target --locked --manifest-path %{_sourcedir}/../Cargo.toml
 
 touch Makefile
 
