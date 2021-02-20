@@ -1,7 +1,7 @@
 use std::sync::mpsc;
 use std::sync::mpsc::{channel, TryRecvError};
 
-use librespot::core::keymaster::Token;
+use librespot_core::keymaster::Token;
 use log::{error, info, warn};
 use qt5qml::core::ToQString;
 use qt5qml::core::{QObjectRef, QString};

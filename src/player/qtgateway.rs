@@ -1,8 +1,8 @@
 use std::ptr;
 use std::sync::mpsc;
 
-use librespot::core::keymaster::Token;
-use librespot::playback::player::PlayerEvent;
+use librespot_core::keymaster::Token;
+use librespot_playback::player::PlayerEvent;
 use log::warn;
 use qt5qml::core::{ConnectionTypeKind, QObject, QObjectRef};
 use qt5qml::{signal, slot, QBox};
