@@ -4,7 +4,7 @@ use std::time::Instant;
 
 use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::compat::Future01CompatExt;
-use futures::{FutureExt, StreamExt, TryFutureExt};
+use futures::StreamExt;
 use futures_01::future::Future as Future01;
 use futures_01::stream::Stream as Stream01;
 use librespot_connect::spirc::Spirc;
@@ -17,7 +17,7 @@ use librespot_playback::audio_backend::Sink;
 use librespot_playback::config::PlayerConfig;
 use librespot_playback::mixer::{Mixer, MixerConfig};
 use librespot_playback::player::Player;
-use log::{error, warn};
+use log::{error, info, warn};
 use tokio_core::reactor::Handle;
 
 use crate::player::qtgateway::{LibrespotEvent, LibrespotGateway};
@@ -73,14 +73,13 @@ pub struct LibrespotController {
 }
 
 impl LibrespotController {
-    pub fn new(
+    pub async fn run(
         handle: Handle,
         control_tx: UnboundedSender<ControlMessage>,
         control_rx: UnboundedReceiver<ControlMessage>,
         gateway: LibrespotGateway,
         setup: LibrespotConfig,
-    ) -> UnboundedSender<ControlMessage> {
-        let gateway = Rc::new(RefCell::new(gateway));
+    ) {
         let self_ = LibrespotController {
             handle: handle.clone(),
             cache: setup.cache,
@@ -96,16 +95,14 @@ impl LibrespotController {
             credentials: setup.credentials,
             auto_connect_times: Vec::new(),
             control_rx,
-            control_tx: control_tx.clone(),
+            control_tx,
 
-            gateway,
+            gateway: Rc::new(RefCell::new(gateway)),
         };
-        handle.spawn(Box::pin(self_.run().unit_error()).compat());
-
-        control_tx
+        self_.run_internal().await;
     }
 
-    pub async fn run(mut self) {
+    pub async fn run_internal(mut self) {
         if !self.login().await {
             return;
         }
@@ -132,6 +129,7 @@ impl LibrespotController {
     }
 
     async fn login(&mut self) -> bool {
+        info!("Logging in ...");
         self.spirc = None;
         self.gateway.borrow_mut().send(LibrespotEvent::Connecting);
 
@@ -154,6 +152,7 @@ impl LibrespotController {
                 return false;
             }
         };
+        info!("Connected");
 
         // setup
         let mixer_config = self.mixer_config.clone();
@@ -177,13 +176,6 @@ impl LibrespotController {
             let _ = control_tx.unbounded_send(ControlMessage::AutoReconnect);
         }));
 
-        // get token
-        let token = get_token(&session, CLIENT_ID, SCOPES).compat().await.ok();
-        self.gateway
-            .borrow_mut()
-            .send(LibrespotEvent::TokenChanged { token });
-        self.gateway.borrow_mut().send(LibrespotEvent::Connected);
-
         let gateway = self.gateway.clone();
         self.handle.spawn(
             event_channel
@@ -191,10 +183,17 @@ impl LibrespotController {
                     if let Some(evt) = LibrespotEvent::from_event(event) {
                         gateway.borrow_mut().send(evt);
                     }
-                    futures_01::future::empty()
+                    futures_01::future::ok(())
                 })
                 .map_err(|_| ()),
         );
+
+        // get token
+        let token = get_token(&session, CLIENT_ID, SCOPES).compat().await.ok();
+        self.gateway
+            .borrow_mut()
+            .send(LibrespotEvent::TokenChanged { token });
+        self.gateway.borrow_mut().send(LibrespotEvent::Connected);
 
         true
     }

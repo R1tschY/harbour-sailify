@@ -21,6 +21,7 @@ use crate::player::controller::{ControlMessage, LibrespotConfig, LibrespotContro
 use crate::player::error::{LibrespotError, LibrespotResult};
 use crate::player::qtgateway::LibrespotGateway;
 use crate::utils::{xdg, UnsafeSend};
+use futures::{FutureExt, TryFutureExt};
 
 pub mod controller;
 pub mod error;
@@ -197,14 +198,20 @@ impl LibrespotThread {
         let handle = thread::Builder::new()
             .name("librespot".to_string())
             .spawn(move || {
-                let core = Core::new().unwrap();
-                LibrespotController::new(
-                    core.handle(),
-                    control_tx,
-                    control_rx,
-                    unsafe { sendable_gateway.unwrap() },
-                    setup,
-                );
+                info!("CORE START");
+                {
+                    let mut core = Core::new().unwrap();
+
+                    let controller_future = LibrespotController::run(
+                        core.handle(),
+                        control_tx,
+                        control_rx,
+                        unsafe { sendable_gateway.unwrap() },
+                        setup,
+                    );
+                    let _ = core.run(Box::pin(controller_future.unit_error()).compat());
+                }
+                info!("CORE END");
             })
             .unwrap();
 
