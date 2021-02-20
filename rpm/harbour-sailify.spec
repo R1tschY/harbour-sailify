@@ -28,7 +28,7 @@ A Spotify client for Sailfish OS focused on usability and stability.
 # - BUILD ----------------------------------------------------------------------
 %build
 
-export RPM_VERSION=%{version}
+export $(egrep -v '^#' %{_sourcedir}/../.env | xargs)
 export RUSTFLAGS="-Clink-arg=-Wl,-z,relro,-z,now -Ccodegen-units=1"
 
 # release

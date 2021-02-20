@@ -1,4 +1,3 @@
-use crate::player::Options;
 use qt5qml::core::QString;
 
 pub mod xdg;

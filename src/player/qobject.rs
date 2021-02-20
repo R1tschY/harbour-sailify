@@ -1,20 +1,16 @@
-use std::path::PathBuf;
-use std::ptr;
 use std::sync::mpsc;
 use std::sync::mpsc::{channel, TryRecvError};
 
-use librespot::playback::player::PlayerEvent;
+use librespot::core::keymaster::Token;
 use log::{error, info, warn};
 use qt5qml::core::ToQString;
-use qt5qml::core::{ConnectionTypeKind, QByteArray, QObject, QObjectRef, QString};
-use qt5qml::QBox;
-use qt5qml::{cstr, signal, slot};
+use qt5qml::core::{QObjectRef, QString};
+use qt5qml::cstr;
 
 use crate::player::error::LibrespotError;
 use crate::player::qtgateway::{LibrespotEvent, LibrespotGateway};
 use crate::player::{LibrespotThread, Options};
 use crate::utils::from_qstring;
-use std::error::Error;
 
 include!(concat!(env!("OUT_DIR"), "/qffi_Librespot.rs"));
 
@@ -45,6 +41,8 @@ pub struct LibrespotPrivate {
     thread: Option<LibrespotThread>,
     options: Options,
 
+    token: Option<String>,
+
     error_kind: Option<String>,
     error_string: Option<String>,
 
@@ -69,6 +67,8 @@ impl LibrespotPrivate {
             qt_rx,
             thread: None,
             options: Options::new(),
+
+            token: None,
 
             error_kind: None,
             error_string: None,
@@ -175,6 +175,7 @@ impl LibrespotPrivate {
             LibrespotEvent::StartReconnect => {
                 self.set_connection_status(ConnectionStatus::Connecting);
             }
+            LibrespotEvent::TokenChanged { token } => self.set_token(token),
         }
     }
 
@@ -187,7 +188,7 @@ impl LibrespotPrivate {
 
         info!("Logging in ...");
 
-        let mut gateway: LibrespotGateway = LibrespotGateway::new(
+        let gateway: LibrespotGateway = LibrespotGateway::new(
             unsafe { &mut *self.qobject }.as_qobject(),
             self.qt_tx.clone(),
         );
@@ -372,6 +373,17 @@ impl LibrespotPrivate {
 
             unsafe { &mut *self.qobject }.durationChanged(value);
         }
+    }
+
+    // token
+
+    pub fn token(&self) -> QString {
+        self.token.to_qstring()
+    }
+
+    fn set_token(&mut self, value: Option<Token>) {
+        self.token = value.map(|t| t.access_token);
+        unsafe { &mut *self.qobject }.tokenChanged(&self.token.to_qstring());
     }
 }
 

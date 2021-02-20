@@ -14,3 +14,6 @@
 # IDEA
 /.idea
 *.iml
+
+# dotenv
+.env

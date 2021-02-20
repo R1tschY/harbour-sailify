@@ -1,24 +1,27 @@
-use std::io;
-use std::mem;
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::time::Instant;
 
-use futures::sync::mpsc::UnboundedReceiver;
-use futures::{Async, Future, Poll, Stream};
-use librespot::connect::spirc::{Spirc, SpircTask};
+use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
+use futures::compat::Future01CompatExt;
+use futures::{FutureExt, StreamExt, TryFutureExt};
+use futures_01::future::Future as Future01;
+use futures_01::stream::Stream as Stream01;
+use librespot::connect::spirc::Spirc;
 use librespot::core::authentication::Credentials;
 use librespot::core::cache::Cache;
 use librespot::core::config::{ConnectConfig, SessionConfig};
+use librespot::core::keymaster::get_token;
 use librespot::core::session::Session;
 use librespot::playback::audio_backend::Sink;
 use librespot::playback::config::PlayerConfig;
 use librespot::playback::mixer::{Mixer, MixerConfig};
-use librespot::playback::player::{Player, PlayerEvent};
+use librespot::playback::player::Player;
 use log::{error, warn};
-use qt5qml::core::QByteArray;
-use qt5qml::QBox;
 use tokio_core::reactor::Handle;
 
 use crate::player::qtgateway::{LibrespotEvent, LibrespotGateway};
+use crate::player::{CLIENT_ID, SCOPES};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ControlMessage {
@@ -27,6 +30,9 @@ pub enum ControlMessage {
     Pause,
     Next,
     Previous,
+
+    // internal
+    AutoReconnect,
 }
 
 #[derive(Clone)]
@@ -41,7 +47,7 @@ pub struct LibrespotConfig {
     pub session_config: SessionConfig,
     pub connect_config: ConnectConfig,
     pub mixer_config: MixerConfig,
-    pub credentials: Option<Credentials>,
+    pub credentials: Credentials,
 }
 
 pub struct LibrespotController {
@@ -56,27 +62,26 @@ pub struct LibrespotController {
     handle: Handle,
 
     control_rx: UnboundedReceiver<ControlMessage>,
+    control_tx: UnboundedSender<ControlMessage>,
 
     spirc: Option<Spirc>,
-    spirc_task: Option<SpircTask>,
-    connect: Box<dyn Future<Item = Session, Error = io::Error>>,
 
-    shutdown: bool,
-    last_credentials: Option<Credentials>,
+    credentials: Credentials,
     auto_connect_times: Vec<Instant>,
 
-    player_event_channel: Option<UnboundedReceiver<PlayerEvent>>,
-    gateway: LibrespotGateway,
+    gateway: Rc<RefCell<LibrespotGateway>>,
 }
 
 impl LibrespotController {
     pub fn new(
         handle: Handle,
+        control_tx: UnboundedSender<ControlMessage>,
         control_rx: UnboundedReceiver<ControlMessage>,
         gateway: LibrespotGateway,
         setup: LibrespotConfig,
-    ) -> LibrespotController {
-        let mut task = LibrespotController {
+    ) -> UnboundedSender<ControlMessage> {
+        let gateway = Rc::new(RefCell::new(gateway));
+        let self_ = LibrespotController {
             handle: handle.clone(),
             cache: setup.cache,
             session_config: setup.session_config,
@@ -87,168 +92,145 @@ impl LibrespotController {
             mixer: setup.mixer,
             mixer_config: setup.mixer_config,
 
-            connect: Box::new(futures::future::empty()),
             spirc: None,
-            spirc_task: None,
-            shutdown: false,
-            last_credentials: None,
+            credentials: setup.credentials,
             auto_connect_times: Vec::new(),
             control_rx,
+            control_tx: control_tx.clone(),
 
-            player_event_channel: None,
             gateway,
         };
+        handle.spawn(Box::pin(self_.run().unit_error()).compat());
 
-        if let Some(credentials) = setup.credentials {
-            task.credentials(credentials);
-        }
-
-        task
+        control_tx
     }
 
-    fn credentials(&mut self, credentials: Credentials) {
-        self.last_credentials = Some(credentials.clone());
-        let config = self.session_config.clone();
-        let handle = self.handle.clone();
+    pub async fn run(mut self) {
+        if !self.login().await {
+            return;
+        }
 
-        let connection = Session::connect(config, credentials, Some(self.cache.clone()), handle);
+        while let Some(msg) = self.control_rx.next().await {
+            if let Some(ref spirc) = self.spirc {
+                match msg {
+                    ControlMessage::Play => spirc.play(),
+                    ControlMessage::Next => spirc.next(),
+                    ControlMessage::Pause => spirc.pause(),
+                    ControlMessage::Previous => spirc.prev(),
+                    ControlMessage::Shutdown => {
+                        self.shutdown();
+                        return;
+                    }
+                    ControlMessage::AutoReconnect => {
+                        if !self.autoreconnect().await {
+                            return;
+                        }
+                    }
+                };
+            }
+        }
+    }
 
-        self.connect = connection;
+    async fn login(&mut self) -> bool {
         self.spirc = None;
-        let task = mem::replace(&mut self.spirc_task, None);
-        if let Some(task) = task {
-            self.handle.spawn(task);
-        }
-        self.send_event(LibrespotEvent::Connecting);
-    }
+        self.gateway.borrow_mut().send(LibrespotEvent::Connecting);
 
-    fn send_event(&mut self, evt: LibrespotEvent) {
-        Self::send_gateway_event(&mut self.gateway, evt)
-    }
-
-    fn send_gateway_event(gateway: &mut LibrespotGateway, evt: LibrespotEvent) {
-        gateway.send(evt);
-    }
-}
-
-impl Future for LibrespotController {
-    type Item = ();
-    type Error = ();
-
-    fn poll(&mut self) -> Poll<(), ()> {
-        loop {
-            let mut progress = false;
-
-            match self.connect.poll() {
-                Ok(Async::NotReady) => (),
-                Ok(Async::Ready(session)) => {
-                    self.connect = Box::new(futures::future::empty());
-                    let mixer_config = self.mixer_config.clone();
-                    let mixer = (self.mixer)(Some(mixer_config));
-                    let player_config = self.player_config.clone();
-                    let connect_config = self.connect_config.clone();
-
-                    let audio_filter = mixer.get_audio_filter();
-                    let backend = self.backend;
-                    let device = self.device.clone();
-                    let (player, event_channel) =
-                        Player::new(player_config, session.clone(), audio_filter, move || {
-                            (backend)(device)
-                        });
-
-                    let (spirc, spirc_task) = Spirc::new(connect_config, session, player, mixer);
-                    self.spirc = Some(spirc);
-                    self.spirc_task = Some(spirc_task);
-                    self.player_event_channel = Some(event_channel);
-                    self.send_event(LibrespotEvent::Connected {});
-
-                    progress = true;
-                }
-                Err(error) => {
-                    error!("Could not connect to server: {}", error);
-                    self.connect = Box::new(futures::future::empty());
-                    self.send_event(LibrespotEvent::ConnectionError {
+        // connect with credentials
+        let session_future = Session::connect(
+            self.session_config.clone(),
+            self.credentials.clone(),
+            Some(self.cache.clone()),
+            self.handle.clone(),
+        );
+        let session = match session_future.compat().await {
+            Ok(session) => session,
+            Err(error) => {
+                error!("Could not connect to server: {}", error);
+                self.gateway
+                    .borrow_mut()
+                    .send(LibrespotEvent::ConnectionError {
                         message: format!("{}", error),
                     });
-                }
+                return false;
             }
+        };
 
-            if let Async::Ready(Some(msg)) = self.control_rx.poll().unwrap() {
-                if msg == ControlMessage::Shutdown {
-                    if !self.shutdown {
-                        if let Some(ref spirc) = self.spirc {
-                            Self::send_gateway_event(&mut self.gateway, LibrespotEvent::Shutdown);
-                            spirc.shutdown();
-                        } else {
-                            return Ok(Async::Ready(()));
-                        }
-                        self.shutdown = true;
-                    } else {
-                        return Ok(Async::Ready(()));
-                    }
-                } else if !self.shutdown {
-                    if let Some(ref spirc) = self.spirc {
-                        match msg {
-                            ControlMessage::Play => spirc.play(),
-                            ControlMessage::Next => spirc.next(),
-                            ControlMessage::Pause => spirc.pause(),
-                            ControlMessage::Previous => spirc.prev(),
-                            ControlMessage::Shutdown => unreachable!(),
-                        };
-                    }
-                }
+        // setup
+        let mixer_config = self.mixer_config.clone();
+        let mixer = (self.mixer)(Some(mixer_config));
+        let player_config = self.player_config.clone();
+        let connect_config = self.connect_config.clone();
 
-                progress = true;
-            }
+        let audio_filter = mixer.get_audio_filter();
+        let backend = self.backend;
+        let device = self.device.clone();
+        let (player, event_channel) =
+            Player::new(player_config, session.clone(), audio_filter, move || {
+                (backend)(device)
+            });
 
-            let mut drop_spirc_and_try_to_reconnect = false;
-            if let Some(ref mut spirc_task) = self.spirc_task {
-                if let Async::Ready(()) = spirc_task.poll().unwrap() {
-                    if self.shutdown {
-                        return Ok(Async::Ready(()));
-                    } else {
-                        warn!("Spirc shut down unexpectedly");
-                        drop_spirc_and_try_to_reconnect = true;
-                        self.send_event(LibrespotEvent::StartReconnect);
-                    }
-                    progress = true;
-                }
-            }
-            if drop_spirc_and_try_to_reconnect {
-                self.spirc_task = None;
-                let now = Instant::now();
-                while (!self.auto_connect_times.is_empty())
-                    && ((now - self.auto_connect_times[0]).as_secs() > 600)
-                {
-                    let _ = self.auto_connect_times.remove(0);
-                }
+        let (spirc, spirc_task) = Spirc::new(connect_config, session.clone(), player, mixer);
+        self.spirc = Some(spirc);
 
-                if let Some(credentials) = self.last_credentials.clone() {
-                    if self.auto_connect_times.len() >= 5 {
-                        warn!("Spirc shut down too often. Not reconnecting automatically.");
-                        self.send_event(LibrespotEvent::ConnectionError {
-                            message: "Spirc shut down too often. Not reconnecting automatically."
-                                .to_string(),
-                        });
-                    } else {
-                        self.auto_connect_times.push(now);
-                        self.credentials(credentials);
-                    }
-                }
-            }
+        let control_tx = self.control_tx.clone();
+        self.handle.spawn(spirc_task.map(move |()| {
+            let _ = control_tx.unbounded_send(ControlMessage::AutoReconnect);
+        }));
 
-            if let Some(ref mut player_event_channel) = self.player_event_channel {
-                if let Async::Ready(Some(event)) = player_event_channel.poll().unwrap() {
+        // get token
+        let token = get_token(&session, CLIENT_ID, SCOPES).compat().await.ok();
+        self.gateway
+            .borrow_mut()
+            .send(LibrespotEvent::TokenChanged { token });
+        self.gateway.borrow_mut().send(LibrespotEvent::Connected);
+
+        let gateway = self.gateway.clone();
+        self.handle.spawn(
+            event_channel
+                .for_each(move |event| {
                     if let Some(evt) = LibrespotEvent::from_event(event) {
-                        self.send_event(evt);
+                        gateway.borrow_mut().send(evt);
                     }
-                    progress = true;
-                }
-            }
+                    futures_01::future::empty()
+                })
+                .map_err(|_| ()),
+        );
 
-            if !progress {
-                return Ok(Async::NotReady);
-            }
+        true
+    }
+
+    fn shutdown(&mut self) {
+        self.gateway.borrow_mut().send(LibrespotEvent::Shutdown);
+        if let Some(ref spirc) = self.spirc {
+            spirc.shutdown();
+        }
+    }
+
+    async fn autoreconnect(&mut self) -> bool {
+        warn!("Spirc shut down unexpectedly");
+        self.gateway
+            .borrow_mut()
+            .send(LibrespotEvent::StartReconnect);
+
+        let now = Instant::now();
+        while (!self.auto_connect_times.is_empty())
+            && ((now - self.auto_connect_times[0]).as_secs() > 600)
+        {
+            let _ = self.auto_connect_times.remove(0);
+        }
+
+        if self.auto_connect_times.len() >= 5 {
+            warn!("Spirc shut down too often. Not reconnecting automatically.");
+            self.gateway
+                .borrow_mut()
+                .send(LibrespotEvent::ConnectionError {
+                    message: "Spirc shut down too often. Not reconnecting automatically."
+                        .to_string(),
+                });
+            false
+        } else {
+            self.auto_connect_times.push(now);
+            self.login().await
         }
     }
 }

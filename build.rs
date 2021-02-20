@@ -1,6 +1,6 @@
 use qobject_compiler::moc::MocConfig;
 use qobject_compiler::{CcBuild, QObjectBuild, QObjectMethod, QObjectProp, QObjectSignal, TypeRef};
-use qt5qml::core::{QByteArray, QString};
+use qt5qml::core::QString;
 
 fn main() {
     // Qt
@@ -76,6 +76,11 @@ fn main() {
                 .read("duration")
                 .notify("durationChanged"),
         )
+        .property(
+            QObjectProp::new::<QString>("token")
+                .read("token")
+                .notify("tokenChanged"),
+        )
         // username
         .method(QObjectMethod::new("username").const_().ret::<QString>())
         .method(QObjectMethod::new("setUsername").arg::<&QString>("value"))
@@ -107,6 +112,9 @@ fn main() {
         // duration
         .method(QObjectMethod::new("duration").const_().ret::<u32>())
         .signal(QObjectSignal::new("durationChanged").arg::<u32>("value"))
+        // token
+        .method(QObjectMethod::new("token").const_().ret::<QString>())
+        .signal(QObjectSignal::new("tokenChanged").arg::<&QString>("value"))
         // slots
         .slot(QObjectMethod::new("login"))
         .slot(QObjectMethod::new("logout"))

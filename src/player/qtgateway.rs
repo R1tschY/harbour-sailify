@@ -1,10 +1,11 @@
+use std::ptr;
 use std::sync::mpsc;
 
+use librespot::core::keymaster::Token;
 use librespot::playback::player::PlayerEvent;
 use log::warn;
-use qt5qml::core::{ConnectionTypeKind, QMetaObject, QObject, QObjectRef};
-use qt5qml::{cstr, signal, slot, QBox};
-use std::ptr;
+use qt5qml::core::{ConnectionTypeKind, QObject, QObjectRef};
+use qt5qml::{signal, slot, QBox};
 
 #[derive(Debug, Clone)]
 pub enum LibrespotEvent {
@@ -46,6 +47,9 @@ pub enum LibrespotEvent {
     },
     Shutdown,
     StartReconnect,
+    TokenChanged {
+        token: Option<Token>,
+    },
 }
 
 impl LibrespotEvent {
@@ -106,8 +110,6 @@ impl LibrespotEvent {
 }
 
 mod details {
-    use super::*;
-
     include!(concat!(env!("OUT_DIR"), "/qffi_LibrespotGateway.rs"));
 
     pub struct LibrespotGatewayPrivate;

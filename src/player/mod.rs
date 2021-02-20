@@ -5,20 +5,17 @@ use std::path::PathBuf;
 use std::thread;
 use std::thread::JoinHandle;
 
-use futures::sync::mpsc::{UnboundedReceiver, UnboundedSender};
-use futures::Stream;
+use futures::channel::mpsc::{unbounded, UnboundedSender};
 use librespot::core::authentication::Credentials;
 use librespot::core::cache::Cache;
 use librespot::core::config::{ConnectConfig, DeviceType, SessionConfig, VolumeCtrl};
 use librespot::core::version;
 use librespot::playback::audio_backend;
 use librespot::playback::config::{Bitrate, PlayerConfig};
-use librespot::playback::mixer::{self, Mixer, MixerConfig};
+use librespot::playback::mixer::{self, MixerConfig};
 use log::{error, info, warn};
-use qt5qml::QBox;
 use sha1::{Digest, Sha1};
 use tokio_core::reactor::Core;
-use url::Url;
 
 use crate::player::controller::{ControlMessage, LibrespotConfig, LibrespotController};
 use crate::player::error::{LibrespotError, LibrespotResult};
@@ -33,6 +30,16 @@ pub mod qtgateway;
 fn device_id(name: &str) -> String {
     hex::encode(Sha1::digest(name.as_bytes()))
 }
+
+pub const CLIENT_ID: &str = env!("SAILIFY_CLIENT_ID");
+
+pub const SCOPES: &str = "user-read-private,\
+playlist-read-private,\
+playlist-read-collaborative,\
+user-library-read,\
+user-library-modify,\
+user-top-read,\
+user-read-recently-played";
 
 #[derive(Clone)]
 pub struct Options {
@@ -159,7 +166,7 @@ fn setup(opts: Options) -> LibrespotResult<LibrespotConfig> {
         session_config,
         player_config,
         connect_config,
-        credentials: Some(credentials),
+        credentials,
         device: opts.device,
         mixer,
         mixer_config,
@@ -185,23 +192,25 @@ impl LibrespotThread {
         let sendable_gateway = UnsafeSend::new(gateway);
         let setup = setup(options)?;
 
-        let (control_tx, control_rx) = futures::sync::mpsc::unbounded();
+        let (control_tx, control_rx) = unbounded();
+        let control_tx_ = control_tx.clone();
         let handle = thread::Builder::new()
             .name("librespot".to_string())
             .spawn(move || {
-                let mut core = Core::new().unwrap();
-                let _ = core.run(LibrespotController::new(
+                let core = Core::new().unwrap();
+                LibrespotController::new(
                     core.handle(),
+                    control_tx,
                     control_rx,
                     unsafe { sendable_gateway.unwrap() },
                     setup,
-                ));
+                );
             })
             .unwrap();
 
         Ok(LibrespotThread {
             handle,
-            control: control_tx,
+            control: control_tx_,
         })
     }
 
