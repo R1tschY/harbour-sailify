@@ -1,5 +1,6 @@
 import QtQuick 2.0
 import Sailfish.Silica 1.0
+import "../components/api"
 
 
 Page {
@@ -8,7 +9,7 @@ Page {
     SilicaFlickable {
         anchors.fill: parent
         contentWidth: parent.width
-        contentHeight: parent.height
+        contentHeight: column.height
 
         Column {
             id: column
@@ -18,10 +19,17 @@ Page {
             }
 
             width: page.width
-            spacing: Theme.paddingLarge
+            spacing: Theme.paddingSmall
 
             PageHeader {
                 title: qsTr("Sailify")
+            }
+
+            Image {
+                fillMode: Image.PreserveAspectCrop
+                source: playingMetadata.albumImage
+                width: page.width
+                height: page.width
             }
 
             DetailItem {
@@ -52,6 +60,11 @@ Page {
             DetailItem {
                 label: qsTr("Track")
                 value: librespot.trackUri
+            }
+
+            DetailItem {
+                label: qsTr("Track URI")
+                value: playingMetadata.uri
             }
 
             Row {

@@ -40,7 +40,14 @@ playlist-read-collaborative,\
 user-library-read,\
 user-library-modify,\
 user-top-read,\
-user-read-recently-played";
+user-follow-read,\
+user-follow-modify,\
+user-read-recently-played,\
+user-read-private,\
+user-read-playback-state,\
+user-read-currently-playing,\
+user-modify-playback-state,\
+streaming";
 
 #[derive(Clone)]
 pub struct Options {
