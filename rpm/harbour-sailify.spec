@@ -15,6 +15,7 @@ BuildRequires:  pkgconfig(libpulse)
 BuildRequires:  pkgconfig(openssl)
 BuildRequires:  desktop-file-utils
 BuildRequires:  rust
+BuildRequires:  rustc
 BuildRequires:  cargo
 
 
@@ -48,7 +49,11 @@ install -d %{buildroot}%{_datadir}/%{name}
 
 install -Dm 755 target/release/%{name} -t %{buildroot}%{_bindir}
 
-install -Dm 644 %{_sourcedir}/../harbour-sailify.png -t %{buildroot}%{_datadir}/icons/hicolor/86x86/apps
+for size in 86 108 128 172
+do
+  install -Dm 644 %{_sourcedir}/../res/${size}x${size}/harbour-sailify.png -t %{buildroot}%{_datadir}/icons/hicolor/${size}x${size}/apps
+done
+
 install -Dm 644 %{_sourcedir}/../harbour-sailify.desktop -t %{buildroot}%{_datadir}/applications
 cp -r %{_sourcedir}/../qml %{buildroot}%{_datadir}/%{name}/qml
 
@@ -64,5 +69,8 @@ desktop-file-install --delete-original       \
 %{_datadir}/%{name}/qml
 %{_datadir}/applications/%{name}.desktop
 %{_datadir}/icons/hicolor/86x86/apps/%{name}.png
+%{_datadir}/icons/hicolor/108x108/apps/%{name}.png
+%{_datadir}/icons/hicolor/128x128/apps/%{name}.png
+%{_datadir}/icons/hicolor/172x172/apps/%{name}.png
 
 
