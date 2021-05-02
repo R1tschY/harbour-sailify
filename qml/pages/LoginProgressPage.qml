@@ -37,7 +37,7 @@ Page {
                 progressLabel.text = qsTr("Logging in …")
                 break;
             case 2: // connected
-                pageStack.replaceAbove(null, Qt.resolvedUrl("CurrentlyPlayingPage.qml"))
+                pageStack.replaceAbove(null, Qt.resolvedUrl("MainNavigationPage.qml"))
                 break;
             }
         }

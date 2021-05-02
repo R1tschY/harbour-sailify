@@ -12,10 +12,14 @@ HttpRequest {
         executeApi("GET", "tracks/" + trackId)
     }
 
+    function search(query) {
+        executeApi("GET", "search", {"q": query, "type": "artist"})
+    }
+
     function executeApi(method, path, params) {
         console.log("Web API " + method + " " + path)
         if (!accessToken) {
-            console.error("Request with without token not possible")
+            console.error("Request without token not possible")
             return
         }
 
