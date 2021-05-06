@@ -10,9 +10,9 @@ edition = "2018"
 
 [dependencies]
 # librespot
-librespot-connect = "^0.1.3"
-librespot-core = "^0.1.3"
-librespot-playback = { version = "^0.1.3", default-features = false, features = ["pulseaudio-backend"]}
+librespot-connect = "^0.1.6"
+librespot-core = "^0.1.6"
+librespot-playback = { version = "^0.1.6", default-features = false, features = ["pulseaudio-backend"]}
 tokio-core = "0.1"
 tokio-io = "0.1"
 futures = { version = "0.3", features = ["compat"], default-features = false }
