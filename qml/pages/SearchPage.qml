@@ -20,9 +20,7 @@ Page {
         }
 
         onSuccess: {
-            console.log(JSON.stringify(response))
-            var data = response.data
-            listView.model = data.artists.items
+            listView.model = response.data.artists.items
         }
     }
 
@@ -32,16 +30,24 @@ Page {
 
         //model:
 
-        header: SearchField {
-            id: searchField
+        header: Column {
+            width: page.width
 
-            placeholderText: qsTr("Search")
-            EnterKey.enabled: text.length > 0
-            EnterKey.iconSource: "image://theme/icon-m-search"
+            PageHeader {
+                title: qsTr("Search")
+            }
 
-            EnterKey.onClicked: searchRequest.update(text)
+            SearchField {
+                id: searchField
 
-            Component.onCompleted: searchField.forceActiveFocus()
+                placeholderText: qsTr("Search")
+                EnterKey.enabled: text.length > 0
+                EnterKey.iconSource: "image://theme/icon-m-search"
+
+                EnterKey.onClicked: searchRequest.update(text)
+
+                Component.onCompleted: searchField.forceActiveFocus()
+            }
         }
 
         delegate: ResultListItem {
@@ -49,6 +55,14 @@ Page {
 
             name: modelData.name
             images: modelData.images
+
+            onClicked: {
+                var props = {
+                    "artistId": modelData.id,
+                    "name":  modelData.name
+                }
+                pageStack.push(Qt.resolvedUrl("ArtistPage.qml"), props)
+            }
         }
 
         ViewPlaceholder {
@@ -59,3 +73,4 @@ Page {
         VerticalScrollDecorator { flickable: listView }
     }
 }
+

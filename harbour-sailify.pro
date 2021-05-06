@@ -10,7 +10,10 @@ DISTFILES += qml/*.qml \
     qml/components/IconListItem.qml \
     qml/components/NavigationItem.qml \
     qml/components/Object.qml \
+    qml/components/PressEffect.qml \
     qml/components/ResultListItem.qml \
+    qml/components/api/SpotifyWebApiListModel.qml \
     qml/components/api/SpotifyWebApiRequest.qml \
+    qml/pages/ArtistPage.qml \
     qml/pages/MainNavigationPage.qml \
     qml/pages/SearchPage.qml

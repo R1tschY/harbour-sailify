@@ -15,8 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import QtQuick 2.0
+import QtQuick 2.6
 import Sailfish.Silica 1.0
+import QtGraphicalEffects 1.0
 
 BackgroundItem {
     id: root
@@ -28,8 +29,14 @@ BackgroundItem {
     property alias name: _title.text
 
     readonly property string _image: {
-        if (images && images.length > 0) {
-            return images[images.length - 1].url
+        if (images) {
+            if (images.length > 0) {
+                return images[images.length - 1].url
+            } else if (images.count > 0) {
+                return images.get(images.count - 1).url
+            } else {
+                return ""
+            }
         } else {
             return ""
         }
@@ -52,20 +59,24 @@ BackgroundItem {
             }
         }
 
-        HighlightImage {
+        Image {
             id: image
 
             anchors.centerIn: parent
             width: _imageSize
             height: _imageSize
 
-            highlighted: root.highlighted
             asynchronous: true
             sourceSize.width: _imageSize
             sourceSize.height: _imageSize
             opacity: image.status === Image.Ready ? 1 : 0
             visible: opacity > 0
             source: _fallback ? fallbackIcon : _image
+
+            layer {
+                enabled: root.highlighted
+                effect: PressEffect { source: image }
+            }
 
             // TODO: Animate opacity
             // TODO: fallback on error

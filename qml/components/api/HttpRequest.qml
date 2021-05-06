@@ -4,17 +4,40 @@ QtObject {
     id: request
 
     // readonly
+
+    //! Error of last request
     property string errorType: ""
+
+    //! XMLHttpRequest.readyState of last request
+    //! 0 UNSENT
+    //! 1 OPENED
+    //! 2 HEADERS_RECEIVED
+    //! 3 LOADING
+    //! 4 DONE
     property int readyState: 0
+
+    //! Received JSON data of last request
     property var data: null
+    //! HTTP status code of last request
     property var status: 0
+    //! HTTP status text of last request
     property var statusText: 0
 
+    // computed
+
+    readonly property bool busy: readyState != 0 && readyState != 4
+
+    // private members
+
     property var _req: null
+
+    // signals
 
     signal finished(var response)
     signal error(string errorType)
     signal success(var response)
+
+    // functions
 
     function abort() {
         if (_req !== null) {
@@ -96,7 +119,7 @@ QtObject {
             } else {
                 resData = req.response
             }
-            console.log("FINISHED " + resData)
+            // console.log("FINISHED " + JSON.stringify(resData))
 
             var response = {
                 data: resData,
