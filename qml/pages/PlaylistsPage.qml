@@ -5,17 +5,13 @@ import "../components"
 Page {
     id: page
 
-    property string artistId
-    property string name
-
     PageListView {
         id: listView
 
-        fallbackIcon: "image://theme/icon-m-media-albums"
-        placeholder: qsTr("No albums for this artist")
+        placeholder: qsTr("No playlists")
 
         header: PageHeader {
-            title: name
+            title: qsTr("Playlists")
         }
 
         delegate: Item {
@@ -30,12 +26,12 @@ Page {
 
                 name: _name
                 images: _images
-                fallbackIcon: "image://theme/icon-m-media-albums"
+                fallbackIcon: "image://theme/icon-m-media-playlists"
             }
         }
     }
 
     Component.onCompleted: {
-        listView.model.fetchArtistsAlbums(artistId, ["album"])
+        listView.model.fetchTop("tracks", "medium_term")
     }
 }

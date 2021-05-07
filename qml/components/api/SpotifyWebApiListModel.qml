@@ -36,7 +36,7 @@ ListModel {
             }
             var items = data.items
 
-            console.log("Web API Success: " + (data.offset + data.item.length) + " / " + data.total)
+            console.log("Web API Success: " + (data.offset + items.length) + " / " + data.total)
 
             model.total = data.total
             model._nextOffset = data.offset + data.limit
@@ -51,16 +51,11 @@ ListModel {
         }
     }
 
-    Image {
-
-    }
-
-
     function fetchFirst(path, params) {
         total = -1
         _nextOffset = 0
         _path = path
-        _params = params
+        _params = params ? params : {}
 
         model.clear()
         _fetch()
@@ -92,6 +87,18 @@ ListModel {
             params["include_groups"] = include_groups
         }
         fetchFirst("artists/" + artistId + "/albums", params)
+    }
+
+    function fetchSavedTracks() {
+        fetchFirst("me/tracks")
+    }
+
+    function fetchTop(type, timeRange) {
+        var params = {}
+        if (timeRange) {
+            params["time_range"] = timeRange
+        }
+        fetchFirst("me/top/" + type, params)
     }
 
 }

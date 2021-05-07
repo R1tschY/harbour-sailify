@@ -31,6 +31,24 @@ Page {
             }
 
             NavigationItem {
+                title: qsTr("Saved tracks")
+                source: "image://theme/icon-m-like"
+                page: Qt.resolvedUrl("SavedTracksPage.qml")
+            }
+
+            NavigationItem {
+                title: qsTr("Top tracks")
+                source: "image://theme/icon-m-media-songs"
+                page: Qt.resolvedUrl("TopTracksPage.qml")
+            }
+
+            NavigationItem {
+                title: qsTr("Playlists")
+                source: "image://theme/icon-m-media-playlists"
+                page: Qt.resolvedUrl("PlaylistsPage.qml")
+            }
+
+            NavigationItem {
                 title: qsTr("Genre & Mood")
                 source: "image://theme/icon-m-ambience"
                 page: Qt.resolvedUrl("CurrentlyPlayingPage.qml")
