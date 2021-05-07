@@ -14,20 +14,12 @@ Page {
             title: qsTr("Saved tracks")
         }
 
-        delegate: Item {
-            width: page.width
-            height: itemItem.height
+        delegate: ResultListItem {
+            id: itemItem
 
-            property string _name: name
-            property var _images: album.images
-
-            ResultListItem {
-                id: itemItem
-
-                name: _name
-                images: _images
-                fallbackIcon: "image://theme/icon-m-media-albums"
-            }
+            name_: name
+            images_: images
+            fallbackIcon: "image://theme/icon-m-media-albums"
         }
     }
 

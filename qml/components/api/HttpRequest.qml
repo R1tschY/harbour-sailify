@@ -162,7 +162,6 @@ QtObject {
             url += '?' + _paramsToQueryString(config.params)
         }
 
-        var requestData = config.data === undefined ? null : config.data
         req.open(config.method.toUpperCase(), url, true);
 
         var headers = config.headers
@@ -173,10 +172,15 @@ QtObject {
         }
 
         if (config.responseType === 'json') {
-            req.setRequestHeader("Accept", "application/json")
+            req.setRequestHeader("Accept", "application/json;charset=UTF-8")
         }
 
-        req.send();
+        if (config.data) {
+            req.setRequestHeader("Content-Type", "application/json;charset=UTF-8")
+            req.send(JSON.stringify(config.data));
+        } else {
+            req.send();
+        }
         return req
     }
 

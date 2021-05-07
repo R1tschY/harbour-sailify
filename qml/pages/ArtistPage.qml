@@ -1,12 +1,19 @@
 import QtQuick 2.0
 import Sailfish.Silica 1.0
 import "../components"
+import "../components/api"
 
 Page {
     id: page
 
     property string artistId
     property string name
+
+    SpotifyWebApiRequest {
+        id: request
+
+
+    }
 
     PageListView {
         id: listView
@@ -18,19 +25,18 @@ Page {
             title: name
         }
 
-        delegate: Item {
-            width: page.width
-            height: itemItem.height
+        delegate: ResultListItem {
+            id: itemItem
 
-            property string _name: name
-            property var _images: images
+            name_: name
+            images_: images
+            fallbackIcon: "image://theme/icon-m-media-albums"
 
-            ResultListItem {
-                id: itemItem
-
-                name: _name
-                images: _images
-                fallbackIcon: "image://theme/icon-m-media-albums"
+            menu: ContextMenu {
+                MenuItem {
+                    text: qsTr("Play")
+                    onClicked: request.play(null, uri)
+                }
             }
         }
     }

@@ -19,14 +19,14 @@ import QtQuick 2.6
 import Sailfish.Silica 1.0
 import QtGraphicalEffects 1.0
 
-BackgroundItem {
+ListItem {
     id: root
     width: parent.width
-    height: Theme.itemSizeMedium
+    contentHeight: Theme.itemSizeMedium
 
-    property var images
+    property alias name_: _title.text
+    property var images_
     property string fallbackIcon: "image://theme/icon-m-music"
-    property alias name: _title.text
 
     readonly property string _image: {
         if (images) {

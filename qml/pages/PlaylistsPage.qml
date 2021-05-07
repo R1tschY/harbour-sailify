@@ -14,20 +14,12 @@ Page {
             title: qsTr("Playlists")
         }
 
-        delegate: Item {
-            width: page.width
-            height: itemItem.height
+        delegate: ResultListItem {
+            id: itemItem
 
-            property string _name: name
-            property var _images: images
-
-            ResultListItem {
-                id: itemItem
-
-                name: _name
-                images: _images
-                fallbackIcon: "image://theme/icon-m-media-playlists"
-            }
+            name_: name
+            images_: images
+            fallbackIcon: "image://theme/icon-m-media-playlists"
         }
     }
 

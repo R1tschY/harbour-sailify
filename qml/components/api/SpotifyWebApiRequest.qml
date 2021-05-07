@@ -2,7 +2,7 @@ import QtQuick 2.0
 import "."
 
 HttpRequest {
-    property string accessToken: ""
+    property string accessToken: librespot.token
 
     function getCurrentPlayback() {
         executeApi("GET", "me/player")
@@ -12,11 +12,31 @@ HttpRequest {
         executeApi("GET", "tracks/" + trackId)
     }
 
-    function search(query) {
-        executeApi("GET", "search", {"q": query, "type": "artist"})
+    function search(query, type) {
+        executeApi("GET", "search", {"q": query, "type": type})
     }
 
-    function executeApi(method, path, params) {
+    function play(trackUri, contextUri, deviceId, positionMs) {
+        var params = {}
+        if (deviceId) {
+            params["device_id"] = deviceId
+        }
+
+        var body = {}
+        if (contextUri) {
+            body["context_uri"] = contextUri
+        }
+        if (trackUri) {
+            body["offset"] = { uri: trackUri }
+        }
+        if (positionMs) {
+            body["position_ms"] = positionMs
+        }
+
+        executeApi("PUT", "me/player/play", params, body)
+    }
+
+    function executeApi(method, path, params, data) {
         console.log("Web API " + method + " " + path)
         if (!accessToken) {
             console.error("Request without token not possible")
@@ -30,7 +50,8 @@ HttpRequest {
                 "Authorization": "Bearer " + accessToken
             },
             "responseType": "json",
-            "params": params
+            "params": params,
+            "data": data
         })
     }
 }

@@ -17,8 +17,8 @@ Page {
         delegate: ResultListItem {
             id: itemItem
 
-            name: track.name
-            images: track.album.images
+            name_: track.name
+            images_: track.album.images
             fallbackIcon: "image://theme/icon-m-media-songs"
         }
     }

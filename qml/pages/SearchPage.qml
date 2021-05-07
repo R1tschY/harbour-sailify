@@ -32,27 +32,19 @@ Page {
             }
         }
 
-        delegate: Item {
-            width: page.width
-            height: itemItem.height
+        delegate: ResultListItem {
+            id: itemItem
 
-            property string _name: name
-            property var _images: images
+            name_: name
+            images_: images
+            fallbackIcon: "image://theme/icon-m-media-albums"
 
-            ResultListItem {
-                id: itemItem
-
-                name: _name
-                images: _images
-                fallbackIcon: "image://theme/icon-m-media-albums"
-
-                onClicked: {
-                    var props = {
-                        "artistId": modelData.id,
-                        "name":  modelData.name
-                    }
-                    pageStack.push(Qt.resolvedUrl("ArtistPage.qml"), props)
+            onClicked: {
+                var props = {
+                    "artistId": id,
+                    "name":  name
                 }
+                pageStack.push(Qt.resolvedUrl("ArtistPage.qml"), props)
             }
         }
 
