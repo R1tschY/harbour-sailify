@@ -32,6 +32,6 @@ Page {
     }
 
     Component.onCompleted: {
-        listView.model.fetchTop("tracks", "medium_term")
+        listView.model.fetchPlaylists()
     }
 }
