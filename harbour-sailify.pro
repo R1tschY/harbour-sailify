@@ -8,7 +8,6 @@ DISTFILES += qml/*.qml \
     qml/components/CurrentlyPlayingMetadata.qml \
     qml/components/CurrentlyPlayingPanel.qml \
     qml/components/IconListItem.qml \
-    qml/components/Margined.qml \
     qml/components/NavigationItem.qml \
     qml/components/Object.qml \
     qml/components/PageListView.qml \
