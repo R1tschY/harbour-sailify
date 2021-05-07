@@ -7,6 +7,7 @@ SilicaListView {
     property string fallbackIcon: "image://theme/icon-m-music"
     property alias placeholder: viewPlaceholder.text
     property alias fetchBatchSize: listModel.limit
+    property alias dataDelegate: listModel.dataDelegate
 
     property bool _complete: false
 

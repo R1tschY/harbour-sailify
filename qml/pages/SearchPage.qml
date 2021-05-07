@@ -1,34 +1,16 @@
 import QtQuick 2.0
 import Sailfish.Silica 1.0
 import "../components"
-import "../components/api"
 
 Page {
     id: page
 
-    SpotifyWebApiRequest {
-        id: searchRequest
+    property bool searched: false
 
-        accessToken: librespot.token
-
-        function update(query) {
-            if (query.length > 0) {
-                searchRequest.search(query)
-            } else {
-                listView.model = 0
-            }
-        }
-
-        onSuccess: {
-            listView.model = response.data.artists.items
-        }
-    }
-
-    SilicaListView {
+    PageListView {
         id: listView
-        anchors.fill: parent
 
-        //model:
+        placeholder: searched ? qsTr("Nothing found") : ""
 
         header: Column {
             width: page.width
@@ -44,33 +26,40 @@ Page {
                 EnterKey.enabled: text.length > 0
                 EnterKey.iconSource: "image://theme/icon-m-search"
 
-                EnterKey.onClicked: searchRequest.update(text)
+                EnterKey.onClicked: listView.model.search(text, ["artist"])
 
                 Component.onCompleted: searchField.forceActiveFocus()
             }
         }
 
-        delegate: ResultListItem {
-            id: itemItem
+        delegate: Item {
+            width: page.width
+            height: itemItem.height
 
-            name: modelData.name
-            images: modelData.images
+            property string _name: name
+            property var _images: images
 
-            onClicked: {
-                var props = {
-                    "artistId": modelData.id,
-                    "name":  modelData.name
+            ResultListItem {
+                id: itemItem
+
+                name: _name
+                images: _images
+                fallbackIcon: "image://theme/icon-m-media-albums"
+
+                onClicked: {
+                    var props = {
+                        "artistId": modelData.id,
+                        "name":  modelData.name
+                    }
+                    pageStack.push(Qt.resolvedUrl("ArtistPage.qml"), props)
                 }
-                pageStack.push(Qt.resolvedUrl("ArtistPage.qml"), props)
             }
         }
 
-        ViewPlaceholder {
-            enabled: listView.count === 0
-            text: qsTr("Nothing found")
+        dataDelegate: function(data) {
+            return data.artists
         }
-
-        VerticalScrollDecorator { flickable: listView }
     }
 }
+
 

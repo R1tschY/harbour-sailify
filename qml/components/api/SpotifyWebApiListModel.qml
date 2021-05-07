@@ -8,6 +8,8 @@ ListModel {
     readonly property alias busy: request.busy
     readonly property bool completlyFetched: _nextOffset >= total
 
+    property var dataDelegate
+
     // readonly
     property int total: -1
     property string errorType
@@ -20,7 +22,6 @@ ListModel {
     property var request: SpotifyWebApiRequest {
         id: request
         onSuccess: {
-
             var data = response.data
 
             if (response.status !== 200) {
@@ -30,10 +31,15 @@ ListModel {
                 return;
             }
 
+            if (dataDelegate) {
+                data = dataDelegate(data)
+            }
+
             if (model._nextOffset !== data.offset) {
-                console.warn("double result")
+                console.warn("double result: " + model._nextOffset + " " + data.offset)
                 return;
             }
+
             var items = data.items
 
             console.log("Web API Success: " + (data.offset + items.length) + " / " + data.total)
@@ -101,4 +107,17 @@ ListModel {
         fetchFirst("me/top/" + type, params)
     }
 
+    function fetchPlaylists() {
+        fetchFirst("me/playlists")
+    }
+
+    function search(query, type) {
+        var params = {
+            q: query
+        }
+        if (type) {
+            params["type"] = type
+        }
+        fetchFirst("search", params)
+    }
 }
