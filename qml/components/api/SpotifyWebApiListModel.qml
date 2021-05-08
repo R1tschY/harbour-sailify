@@ -35,6 +35,11 @@ ListModel {
                 data = dataDelegate(data)
             }
 
+            if (data.offset === undefined) {
+                console.error("offset key missing, got keys " + Object.keys(data))
+                return;
+            }
+
             if (model._nextOffset !== data.offset) {
                 console.warn("double result: " + model._nextOffset + " " + data.offset)
                 return;
@@ -93,6 +98,10 @@ ListModel {
             params["include_groups"] = include_groups
         }
         fetchFirst("artists/" + artistId + "/albums", params)
+    }
+
+    function fetchAlbumsTracks(albumId) {
+        fetchFirst("albums/" + albumId + "/tracks")
     }
 
     function fetchSavedTracks() {

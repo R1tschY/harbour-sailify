@@ -15,6 +15,7 @@ DISTFILES += qml/*.qml \
     qml/components/ResultListItem.qml \
     qml/components/api/SpotifyWebApiListModel.qml \
     qml/components/api/SpotifyWebApiRequest.qml \
+    qml/pages/AlbumPage.qml \
     qml/pages/ArtistPage.qml \
     qml/pages/MainNavigationPage.qml \
     qml/pages/PlaylistsPage.qml \

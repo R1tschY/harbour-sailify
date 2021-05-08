@@ -18,7 +18,7 @@ Page {
             id: itemItem
 
             name_: name
-            images_: images
+            images_: album.images
             fallbackIcon: "image://theme/icon-m-media-albums"
         }
     }

@@ -26,14 +26,15 @@ ListItem {
 
     property alias name_: _title.text
     property var images_
+    property bool playing: false
     property string fallbackIcon: "image://theme/icon-m-music"
 
     readonly property string _image: {
-        if (images) {
-            if (images.length > 0) {
-                return images[images.length - 1].url
-            } else if (images.count > 0) {
-                return images.get(images.count - 1).url
+        if (images_) {
+            if (images_.length > 0) {
+                return images_[images_.length - 1].url
+            } else if (images_.count > 0) {
+                return images_.get(images_.count - 1).url
             } else {
                 return ""
             }
@@ -92,6 +93,8 @@ ListItem {
     Label {
         id: _title
         truncationMode: TruncationMode.Fade
+
+        color: playing ? Theme.highlightColor : Theme.primaryColor
 
         anchors {
             left: imageBox.right

@@ -11,15 +11,12 @@ Page {
 
     SpotifyWebApiRequest {
         id: request
-
-
     }
 
     PageListView {
         id: listView
 
-        fallbackIcon: "image://theme/icon-m-media-albums"
-        placeholder: qsTr("No albums for this artist")
+        placeholder: qsTr("This artist has no albums")
 
         header: PageHeader {
             title: name
@@ -37,6 +34,12 @@ Page {
                     text: qsTr("Play")
                     onClicked: request.play(null, uri)
                 }
+            }
+
+            onClicked: {
+                pageStack.push(Qt.resolvedUrl("AlbumPage.qml"), {
+                                   albumId: id, album: listView.model.get(index)
+                               })
             }
         }
     }
