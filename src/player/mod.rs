@@ -6,6 +6,7 @@ use std::thread;
 use std::thread::JoinHandle;
 
 use futures::channel::mpsc::{unbounded, UnboundedSender};
+use futures::{FutureExt, TryFutureExt};
 use librespot_core::authentication::Credentials;
 use librespot_core::cache::Cache;
 use librespot_core::config::{ConnectConfig, DeviceType, SessionConfig, VolumeCtrl};
@@ -14,6 +15,7 @@ use librespot_playback::audio_backend;
 use librespot_playback::config::{Bitrate, PlayerConfig};
 use librespot_playback::mixer::{self, MixerConfig};
 use log::{error, info, warn};
+use os_release::OsRelease;
 use sha1::{Digest, Sha1};
 use tokio_core::reactor::Core;
 
@@ -21,7 +23,6 @@ use crate::player::controller::{ControlMessage, LibrespotConfig, LibrespotContro
 use crate::player::error::{LibrespotError, LibrespotResult};
 use crate::player::qtgateway::LibrespotGateway;
 use crate::utils::{xdg, UnsafeSend};
-use futures::{FutureExt, TryFutureExt};
 
 pub mod controller;
 pub mod error;
@@ -76,10 +77,16 @@ pub struct Options {
 
 impl Options {
     pub fn new() -> Self {
+        let hw_name = OsRelease::new_from("/etc/hw-release")
+            .ok()
+            .map(|hw| hw.name)
+            .unwrap_or("Sailfish OS".to_string());
+        let cache_dir = xdg::config_home().join("harbour-sailify").join("librespot");
+
         Self {
-            cache: xdg::config_home().join("harbour-sailify").join("librespot"),
+            cache: cache_dir,
             audio_cache: true,
-            device_name: "Sailify".to_string(),
+            device_name: hw_name,
             bitrate: Bitrate::default(),
             username: None,
             password: None,

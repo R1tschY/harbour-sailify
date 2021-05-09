@@ -20,6 +20,7 @@ futures_01 = { version = "0.1", package = "futures" }
 sha-1 = "0.8"
 url = "1.7"
 hex = "0.3"
+os-release = "0.1"
 
 # lib
 quick-error = "2"
