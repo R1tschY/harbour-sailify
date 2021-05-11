@@ -32,7 +32,7 @@ Page {
             menu: ContextMenu {
                 MenuItem {
                     text: qsTr("Play")
-                    onClicked: request.play(null, uri)
+                    onClicked: request.play(null, uri, librespot.deviceId)
                 }
             }
 

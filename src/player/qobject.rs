@@ -99,7 +99,7 @@ impl LibrespotPrivate {
     }
 
     // #[slot]
-    pub fn on_player_event(&mut self) {
+    pub fn _on_player_event(&mut self) {
         let evt = match self.qt_rx.try_recv() {
             Ok(evt) => evt,
             Err(TryRecvError::Empty) => {
@@ -196,7 +196,7 @@ impl LibrespotPrivate {
         match LibrespotThread::run(gateway, self.options.clone()) {
             Ok(thread) => {
                 self.thread = Some(thread);
-                unsafe { &mut *self.qobject }.activeChanged(true);
+                unsafe { &mut *self.qobject }.active_changed(true);
             }
             Err(err) => self.set_error(err),
         }
@@ -227,7 +227,7 @@ impl LibrespotPrivate {
         self.set_connection_status(ConnectionStatus::Disconnected);
         self.set_status(PlayerStatus::NoMedia);
 
-        unsafe { &mut *self.qobject }.activeChanged(false);
+        unsafe { &mut *self.qobject }.active_changed(false);
     }
 
     // #[slot]
@@ -288,7 +288,7 @@ impl LibrespotPrivate {
         self.error_kind = Some(kind);
         self.error_string = Some(message);
 
-        unsafe { &mut *self.qobject }.errorOccurred();
+        unsafe { &mut *self.qobject }.error_occurred();
     }
 
     // status
@@ -301,7 +301,7 @@ impl LibrespotPrivate {
         if self.status != status {
             self.status = status;
 
-            unsafe { &mut *self.qobject }.statusChanged(self.status as i32);
+            unsafe { &mut *self.qobject }.status_changed(self.status as i32);
         }
     }
 
@@ -315,7 +315,7 @@ impl LibrespotPrivate {
         if self.connection != status {
             self.connection = status;
 
-            unsafe { &mut *self.qobject }.connectionStatusChanged(self.connection as i32);
+            unsafe { &mut *self.qobject }.connection_status_changed(self.connection as i32);
         }
     }
 
@@ -329,7 +329,7 @@ impl LibrespotPrivate {
         if self.track != uri {
             self.track = uri;
 
-            unsafe { &mut *self.qobject }.trackUriChanged(&self.track.to_qstring());
+            unsafe { &mut *self.qobject }.track_uri_changed(&self.track.to_qstring());
         }
     }
 
@@ -343,7 +343,7 @@ impl LibrespotPrivate {
         if self.paused != value {
             self.paused = value;
 
-            unsafe { &mut *self.qobject }.pausedChanged(value);
+            unsafe { &mut *self.qobject }.paused_changed(value);
         }
     }
 
@@ -357,7 +357,7 @@ impl LibrespotPrivate {
         if self.position_ms != value {
             self.position_ms = value;
 
-            unsafe { &mut *self.qobject }.positionChanged(value);
+            unsafe { &mut *self.qobject }.position_changed(value);
         }
     }
 
@@ -371,7 +371,7 @@ impl LibrespotPrivate {
         if self.duration_ms != value {
             self.duration_ms = value;
 
-            unsafe { &mut *self.qobject }.durationChanged(value);
+            unsafe { &mut *self.qobject }.duration_changed(value);
         }
     }
 
@@ -383,7 +383,19 @@ impl LibrespotPrivate {
 
     fn set_token(&mut self, value: Option<Token>) {
         self.token = value.map(|t| t.access_token);
-        unsafe { &mut *self.qobject }.tokenChanged(&self.token.to_qstring());
+        unsafe { &mut *self.qobject }.token_changed(&self.token.to_qstring());
+    }
+
+    // device id
+
+    pub fn device_id(&self) -> QString {
+        self.options.device_id.to_qstring()
+    }
+
+    // device name
+
+    pub fn device_name(&self) -> QString {
+        self.options.device_name.to_qstring()
     }
 }
 

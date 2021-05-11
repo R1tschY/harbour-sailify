@@ -81,6 +81,16 @@ fn main() {
                 .read("token")
                 .notify("tokenChanged"),
         )
+        .property(
+            QObjectProp::new::<QString>("deviceId")
+                .read("deviceId")
+                .const_(),
+        )
+        .property(
+            QObjectProp::new::<QString>("deviceName")
+                .read("deviceName")
+                .const_(),
+        )
         // username
         .method(QObjectMethod::new("username").const_().ret::<QString>())
         .method(QObjectMethod::new("setUsername").arg::<&QString>("value"))
@@ -115,6 +125,10 @@ fn main() {
         // token
         .method(QObjectMethod::new("token").const_().ret::<QString>())
         .signal(QObjectSignal::new("tokenChanged").arg::<&QString>("value"))
+        // device id
+        .method(QObjectMethod::new("deviceId").const_().ret::<QString>())
+        // device name
+        .method(QObjectMethod::new("deviceName").const_().ret::<QString>())
         // slots
         .slot(QObjectMethod::new("login"))
         .slot(QObjectMethod::new("logout"))

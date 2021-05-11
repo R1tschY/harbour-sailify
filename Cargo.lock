@@ -409,9 +409,9 @@ checksum = "3a471a38ef8ed83cd6e40aa59c1ffe17db6855c18e3604d9c4ed8c08ebc28678"
 
 [[package]]
 name = "futures"
-version = "0.3.14"
+version = "0.3.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9d5813545e459ad3ca1bff9915e9ad7f1a47dc6a91b627ce321d5863b7dd253"
+checksum = "0e7e43a803dae2fa37c1f6a8fe121e1f7bf9548b4dfc0522a42f34145dadfc27"
 dependencies = [
  "futures-channel",
  "futures-core",
@@ -423,9 +423,9 @@ dependencies = [
 
 [[package]]
 name = "futures-channel"
-version = "0.3.14"
+version = "0.3.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce79c6a52a299137a6013061e0cf0e688fce5d7f1bc60125f520912fdb29ec25"
+checksum = "e682a68b29a882df0545c143dc3646daefe80ba479bcdede94d5a703de2871e2"
 dependencies = [
  "futures-core",
  "futures-sink",
@@ -433,9 +433,9 @@ dependencies = [
 
 [[package]]
 name = "futures-core"
-version = "0.3.14"
+version = "0.3.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "098cd1c6dda6ca01650f1a37a794245eb73181d0d4d4e955e2f3c37db7af1815"
+checksum = "0402f765d8a89a26043b889b26ce3c4679d268fa6bb22cd7c6aad98340e179d1"
 
 [[package]]
 name = "futures-cpupool"
@@ -449,28 +449,29 @@ dependencies = [
 
 [[package]]
 name = "futures-io"
-version = "0.3.14"
+version = "0.3.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "365a1a1fb30ea1c03a830fdb2158f5236833ac81fa0ad12fe35b29cddc35cb04"
+checksum = "acc499defb3b348f8d8f3f66415835a9131856ff7714bf10dadfc4ec4bdb29a1"
 
 [[package]]
 name = "futures-sink"
-version = "0.3.14"
+version = "0.3.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c5629433c555de3d82861a7a4e3794a4c40040390907cfbfd7143a92a426c23"
+checksum = "a57bead0ceff0d6dde8f465ecd96c9338121bb7717d3e7b108059531870c4282"
 
 [[package]]
 name = "futures-task"
-version = "0.3.14"
+version = "0.3.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba7aa51095076f3ba6d9a1f702f74bd05ec65f555d70d2033d55ba8d69f581bc"
+checksum = "8a16bef9fc1a4dddb5bee51c989e3fbba26569cbb0e31f5b303c184e3dd33dae"
 
 [[package]]
 name = "futures-util"
-version = "0.3.14"
+version = "0.3.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c144ad54d60f23927f0a6b6d816e4271278b64f005ad65e4e35291d2de9c025"
+checksum = "feb5c238d27e2bf94ffdfd27b2c29e3df4a68c4193bb6427384259e2bf191967"
 dependencies = [
+ "autocfg 1.0.1",
  "futures 0.1.31",
  "futures-channel",
  "futures-core",
@@ -530,12 +531,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hex"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "805026a5d0141ffc30abb3be3173848ad46a1b1664fe632428479619a3644d77"
-
-[[package]]
 name = "hmac"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -558,9 +553,9 @@ dependencies = [
 
 [[package]]
 name = "httparse"
-version = "1.4.0"
+version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a1ce40d6fc9764887c2fdc7305c3dcc429ba11ff981c1509416afd5697e4437"
+checksum = "f3a87b616e37e93c22fb19bcd386f02f3af5ea98a25670ad0fce773de23c5e68"
 
 [[package]]
 name = "hyper"
@@ -802,7 +797,7 @@ dependencies = [
  "tokio-core",
  "tokio-io",
  "url",
- "uuid",
+ "uuid 0.7.4",
  "vergen",
 ]
 
@@ -1165,20 +1160,19 @@ dependencies = [
 [[package]]
 name = "qobject-compiler"
 version = "0.1.0"
-source = "git+https://github.com/R1tschY/qobject-rs.git?rev=e537ce91#e537ce91227273607754bd3a135a511aad9e5cb0"
+source = "git+https://github.com/R1tschY/qobject-rs.git?rev=b1c2d083ab46eef8a890ab78e32c9925d8c2959d#b1c2d083ab46eef8a890ab78e32c9925d8c2959d"
 dependencies = [
  "cc",
- "lazy_static",
  "pkg-config",
  "qt5qml",
- "regex",
 ]
 
 [[package]]
 name = "qt5qml"
 version = "0.1.0"
-source = "git+https://github.com/R1tschY/qobject-rs.git?rev=e537ce91#e537ce91227273607754bd3a135a511aad9e5cb0"
+source = "git+https://github.com/R1tschY/qobject-rs.git?rev=b1c2d083ab46eef8a890ab78e32c9925d8c2959d#b1c2d083ab46eef8a890ab78e32c9925d8c2959d"
 dependencies = [
+ "cc",
  "cpp",
  "cpp_build",
  "pkg-config",
@@ -1533,8 +1527,7 @@ version = "0.1.0"
 dependencies = [
  "env_logger",
  "futures 0.1.31",
- "futures 0.3.14",
- "hex",
+ "futures 0.3.15",
  "librespot-connect",
  "librespot-core",
  "librespot-playback",
@@ -1545,10 +1538,9 @@ dependencies = [
  "qt5qml",
  "quick-error 2.0.1",
  "sailfishapp",
- "sha-1",
  "tokio-core",
  "tokio-io",
- "url",
+ "uuid 0.8.2",
 ]
 
 [[package]]
@@ -2067,6 +2059,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "90dbc611eb48397705a6b0f6e917da23ae517e4d127123d2cf7674206627d32a"
 dependencies = [
  "rand 0.6.5",
+]
+
+[[package]]
+name = "uuid"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
+dependencies = [
+ "getrandom 0.2.2",
 ]
 
 [[package]]

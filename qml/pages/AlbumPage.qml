@@ -55,7 +55,7 @@ Page {
             playing: librespot.trackUri === uri
             fallbackIcon: "image://theme/icon-m-media-songs"
 
-            onClicked: request.play(uri, "spotify:album:" + albumId)
+            onClicked: request.play(uri, "spotify:album:" + albumId, librespot.deviceId)
         }
     }
 

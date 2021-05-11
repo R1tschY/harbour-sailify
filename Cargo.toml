@@ -17,9 +17,7 @@ tokio-core = "0.1"
 tokio-io = "0.1"
 futures = { version = "0.3", features = ["compat"], default-features = false }
 futures_01 = { version = "0.1", package = "futures" }
-sha-1 = "0.8"
-url = "1.7"
-hex = "0.3"
+uuid = { version = "0.8", default-features = false, features = ["v4"] }
 os-release = "0.1"
 
 # lib
@@ -30,10 +28,10 @@ log = "0.4"
 env_logger =  { version = "^0.8.1", default-features = false, features = ["termcolor", "atty"]}
 
 # qt app
-qt5qml = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "e537ce91" }
+qt5qml = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "b1c2d083ab46eef8a890ab78e32c9925d8c2959d" }
 sailfishapp = { path = "sailfishapp" }
 
 [build-dependencies]
-qobject-compiler = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "e537ce91"}
-qt5qml = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "e537ce91"}
+qobject-compiler = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "b1c2d083ab46eef8a890ab78e32c9925d8c2959d"}
+qt5qml = { git = "https://github.com/R1tschY/qobject-rs.git", rev = "b1c2d083ab46eef8a890ab78e32c9925d8c2959d"}
 pkg-config = "0.3"

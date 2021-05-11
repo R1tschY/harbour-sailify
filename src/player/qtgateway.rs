@@ -1,4 +1,3 @@
-use std::ptr;
 use std::sync::mpsc;
 
 use librespot_core::keymaster::Token;
@@ -128,7 +127,7 @@ pub struct LibrespotGateway {
 
 impl LibrespotGateway {
     pub fn new(parent: &QObject, tx: mpsc::Sender<LibrespotEvent>) -> Self {
-        let mut qobject = details::LibrespotGateway::new(ptr::null_mut());
+        let mut qobject = details::LibrespotGateway::new();
 
         QObject::connect(
             qobject.as_qobject(),
@@ -146,7 +145,7 @@ impl LibrespotGateway {
         if let Err(_) = self.tx.send(evt) {
             warn!("Failed to send librespot event to qt thread");
         } else {
-            self.qobject.playerEvent();
+            self.qobject.player_event();
         }
     }
 }

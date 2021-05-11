@@ -16,8 +16,8 @@ use librespot_playback::config::{Bitrate, PlayerConfig};
 use librespot_playback::mixer::{self, MixerConfig};
 use log::{error, info, warn};
 use os_release::OsRelease;
-use sha1::{Digest, Sha1};
 use tokio_core::reactor::Core;
+use uuid::Uuid;
 
 use crate::player::controller::{ControlMessage, LibrespotConfig, LibrespotController};
 use crate::player::error::{LibrespotError, LibrespotResult};
@@ -28,10 +28,6 @@ pub mod controller;
 pub mod error;
 pub mod qobject;
 pub mod qtgateway;
-
-fn device_id(name: &str) -> String {
-    hex::encode(Sha1::digest(name.as_bytes()))
-}
 
 pub const CLIENT_ID: &str = env!("SAILIFY_CLIENT_ID");
 
@@ -55,13 +51,14 @@ pub struct Options {
     pub cache: PathBuf,
     pub audio_cache: bool,
     pub device_name: String,
+    pub device_id: String,
     pub bitrate: Bitrate,
     pub username: Option<String>,
     pub password: Option<String>,
     pub proxy: Option<String>,
     pub ap_port: Option<u16>,
     pub backend: Option<String>,
-    pub device: Option<String>,
+    pub backend_device: Option<String>,
     pub mixer: Option<String>,
     pub mixer_name: String,
     pub mixer_card: String,
@@ -83,17 +80,28 @@ impl Options {
             .unwrap_or("Sailfish OS".to_string());
         let cache_dir = xdg::config_home().join("harbour-sailify").join("librespot");
 
+        let device_id_path = cache_dir.join("device_id");
+        let device_id = if let Ok(device_id) = fs::read_to_string(&device_id_path) {
+            device_id
+        } else {
+            let mut buffer = Uuid::encode_buffer();
+            let device_id = Uuid::new_v4().to_simple().encode_lower(&mut buffer);
+            fs::write(&device_id_path, &device_id).unwrap();
+            device_id.to_string()
+        };
+
         Self {
             cache: cache_dir,
             audio_cache: true,
             device_name: hw_name,
+            device_id,
             bitrate: Bitrate::default(),
             username: None,
             password: None,
             proxy: None,
             ap_port: None,
             backend: None,
-            device: None,
+            backend_device: None,
             mixer: None,
             mixer_name: "PCM".to_string(),
             mixer_card: "default".to_string(),
@@ -153,7 +161,7 @@ fn setup(opts: Options) -> LibrespotResult<LibrespotConfig> {
 
     let session_config = SessionConfig {
         user_agent: version::version_string(),
-        device_id: device_id(&opts.device_name),
+        device_id: opts.device_id,
         proxy: None,
         ap_port: opts.ap_port,
     };
@@ -182,7 +190,7 @@ fn setup(opts: Options) -> LibrespotResult<LibrespotConfig> {
         player_config,
         connect_config,
         credentials,
-        device: opts.device,
+        device: opts.backend_device,
         mixer,
         mixer_config,
     })
