@@ -1,11 +1,13 @@
 use std::sync::mpsc;
 use std::sync::mpsc::{channel, TryRecvError};
+use std::time::{Duration, Instant};
 
 use librespot_core::keymaster::Token;
 use log::{error, info, warn};
-use qt5qml::core::ToQString;
-use qt5qml::core::{QObjectRef, QString};
-use qt5qml::cstr;
+use qt5qml::core::QObject;
+use qt5qml::core::{ConnectionTypeKind, QObjectRef, QString, TimerType};
+use qt5qml::core::{QTimer, ToQString};
+use qt5qml::{cstr, slot, QBox};
 
 use crate::player::error::LibrespotError;
 use crate::player::qtgateway::{LibrespotEvent, LibrespotGateway};
@@ -15,7 +17,14 @@ use crate::utils::from_qstring;
 include!(concat!(env!("OUT_DIR"), "/qffi_Librespot.rs"));
 
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub enum PlayerStatus {
+pub enum PlayerState {
+    Stopped = 0,
+    Playing = 1,
+    Paused = 2,
+}
+
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub enum MediaStatus {
     NoMedia = 0,
     Loading = 1,
     Loaded = 2,
@@ -36,6 +45,8 @@ pub enum ConnectionStatus {
 
 pub struct LibrespotPrivate {
     qobject: *mut Librespot,
+    timer: QBox<QTimer>,
+
     qt_tx: mpsc::Sender<LibrespotEvent>,
     qt_rx: mpsc::Receiver<LibrespotEvent>,
     thread: Option<LibrespotThread>,
@@ -46,11 +57,12 @@ pub struct LibrespotPrivate {
     error_kind: Option<String>,
     error_string: Option<String>,
 
-    status: PlayerStatus,
+    media_status: MediaStatus,
     connection: ConnectionStatus,
     track: Option<String>,
-    paused: bool,
+    state: PlayerState,
     position_ms: u32,
+    position_instant: Instant,
     duration_ms: u32,
 }
 
@@ -61,8 +73,20 @@ pub fn register_librespot() {
 impl LibrespotPrivate {
     pub fn new(qobject: *mut Librespot) -> Self {
         let (qt_tx, qt_rx) = channel();
+        let mut timer = QTimer::new();
+        timer.set_interval(Duration::from_millis(1000));
+        QObject::connect(
+            timer.as_qobject(),
+            QTimer::timeout_signal(),
+            unsafe { &*qobject }.as_qobject(),
+            slot!("updatePosition()"),
+            ConnectionTypeKind::Auto,
+        );
+
         Self {
             qobject,
+            timer,
+
             qt_tx,
             qt_rx,
             thread: None,
@@ -72,12 +96,13 @@ impl LibrespotPrivate {
 
             error_kind: None,
             error_string: None,
-            status: PlayerStatus::NoMedia,
+            media_status: MediaStatus::NoMedia,
             connection: ConnectionStatus::Disconnected,
             track: None,
-            paused: false,
+            state: PlayerState::Stopped,
             position_ms: 0,
             duration_ms: 0,
+            position_instant: Instant::now(),
         }
     }
 
@@ -114,8 +139,9 @@ impl LibrespotPrivate {
 
         match evt {
             LibrespotEvent::Stopped { .. } => {
-                self.set_status(PlayerStatus::NoMedia);
+                self.set_media_status(MediaStatus::NoMedia);
                 self.set_track_uri(None);
+                self.set_position(0, PlayerState::Stopped);
             }
             LibrespotEvent::Changed { new_track_id } => {
                 self.set_track_uri(Some(new_track_id));
@@ -126,8 +152,8 @@ impl LibrespotPrivate {
                 ..
             } => {
                 self.set_track_uri(Some(track_id));
-                self.set_status(PlayerStatus::Loading);
-                self.set_position(position_ms);
+                self.set_media_status(MediaStatus::Loading);
+                self.set_position(position_ms, PlayerState::Stopped);
             }
             LibrespotEvent::Playing {
                 track_id,
@@ -136,10 +162,10 @@ impl LibrespotPrivate {
                 ..
             } => {
                 self.set_track_uri(Some(track_id));
-                self.set_status(PlayerStatus::Loaded);
-                self.set_position(position_ms);
+                self.set_media_status(MediaStatus::Loaded);
+                self.set_position(position_ms, PlayerState::Playing);
                 self.set_duration(duration_ms);
-                self.set_paused(false);
+                self.timer.start();
             }
             LibrespotEvent::Paused {
                 track_id,
@@ -148,15 +174,16 @@ impl LibrespotPrivate {
                 ..
             } => {
                 self.set_track_uri(Some(track_id));
-                self.set_position(position_ms);
+                self.set_position(position_ms, PlayerState::Paused);
                 self.set_duration(duration_ms);
-                self.set_paused(true);
+                self.timer.stop();
             }
             LibrespotEvent::Unavailable { track_id, .. } => {
                 self.set_track_uri(Some(track_id));
-                self.set_status(PlayerStatus::InvalidMedia);
-                self.set_position(0);
+                self.set_media_status(MediaStatus::InvalidMedia);
+                self.set_position(0, PlayerState::Stopped);
                 self.set_duration(0);
+                self.timer.stop();
             }
             LibrespotEvent::VolumeSet { .. } => {}
             LibrespotEvent::Connecting => self.set_connection_status(ConnectionStatus::Connecting),
@@ -166,14 +193,17 @@ impl LibrespotPrivate {
             LibrespotEvent::ConnectionError { message } => {
                 self.set_error(LibrespotError::Connection(message));
                 self.shutdown();
+                self.set_position(0, PlayerState::Stopped);
             }
             LibrespotEvent::Shutdown => {
                 self.set_connection_status(ConnectionStatus::Disconnected);
-                self.set_status(PlayerStatus::NoMedia);
+                self.set_media_status(MediaStatus::NoMedia);
+                self.set_position(0, PlayerState::Stopped);
                 self.thread = None;
             }
             LibrespotEvent::StartReconnect => {
                 self.set_connection_status(ConnectionStatus::Connecting);
+                self.set_position(0, PlayerState::Stopped);
             }
             LibrespotEvent::TokenChanged { token } => self.set_token(token),
         }
@@ -225,7 +255,7 @@ impl LibrespotPrivate {
 
         self.shutdown_thread();
         self.set_connection_status(ConnectionStatus::Disconnected);
-        self.set_status(PlayerStatus::NoMedia);
+        self.set_media_status(MediaStatus::NoMedia);
 
         unsafe { &mut *self.qobject }.active_changed(false);
     }
@@ -293,15 +323,15 @@ impl LibrespotPrivate {
 
     // status
 
-    pub fn status(&self) -> i32 {
-        self.status as i32
+    pub fn media_status(&self) -> i32 {
+        self.media_status as i32
     }
 
-    pub fn set_status(&mut self, status: PlayerStatus) {
-        if self.status != status {
-            self.status = status;
+    pub fn set_media_status(&mut self, status: MediaStatus) {
+        if self.media_status != status {
+            self.media_status = status;
 
-            unsafe { &mut *self.qobject }.status_changed(self.status as i32);
+            unsafe { &mut *self.qobject }.media_status_changed(self.media_status as i32);
         }
     }
 
@@ -336,28 +366,39 @@ impl LibrespotPrivate {
     // paused
 
     pub fn paused(&self) -> bool {
-        self.paused
-    }
-
-    pub fn set_paused(&mut self, value: bool) {
-        if self.paused != value {
-            self.paused = value;
-
-            unsafe { &mut *self.qobject }.paused_changed(value);
-        }
+        self.state == PlayerState::Paused
     }
 
     // position
 
     pub fn position(&self) -> u32 {
-        self.position_ms
+        if self.state == PlayerState::Playing {
+            let update = Instant::now()
+                .duration_since(self.position_instant)
+                .as_millis() as u32;
+            self.position_ms + update
+        } else {
+            self.position_ms
+        }
     }
 
-    pub fn set_position(&mut self, value: u32) {
+    pub fn set_position(&mut self, value: u32, state: PlayerState) {
+        self.position_instant = Instant::now();
+
+        if self.state != state {
+            self.state = state;
+            unsafe { &mut *self.qobject }.paused_changed(self.paused());
+        }
+
         if self.position_ms != value {
             self.position_ms = value;
-
             unsafe { &mut *self.qobject }.position_changed(value);
+        }
+
+        if self.state == PlayerState::Playing {
+            self.timer.start();
+        } else {
+            self.timer.stop();
         }
     }
 
@@ -396,6 +437,14 @@ impl LibrespotPrivate {
 
     pub fn device_name(&self) -> QString {
         self.options.device_name.to_qstring()
+    }
+
+    // private
+
+    pub fn update_position(&self) {
+        if self.state == PlayerState::Playing {
+            unsafe { &mut *self.qobject }.position_changed(self.position());
+        }
     }
 }
 

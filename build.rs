@@ -47,9 +47,9 @@ fn main() {
                 .notify("errorOccurred"),
         )
         .property(
-            QObjectProp::new::<i32>("status")
-                .read("status")
-                .notify("statusChanged"),
+            QObjectProp::new::<i32>("mediaStatus")
+                .read("mediaStatus")
+                .notify("mediaStatusChanged"),
         )
         .property(
             QObjectProp::new::<i32>("connectionStatus")
@@ -105,8 +105,8 @@ fn main() {
         .method(QObjectMethod::new("errorKind").const_().ret::<QString>())
         .signal(QObjectSignal::new("errorOccurred"))
         // status
-        .method(QObjectMethod::new("status").const_().ret::<i32>())
-        .signal(QObjectSignal::new("statusChanged").arg::<i32>("status"))
+        .method(QObjectMethod::new("mediaStatus").const_().ret::<i32>())
+        .signal(QObjectSignal::new("mediaStatusChanged").arg::<i32>("status"))
         // connection status
         .method(QObjectMethod::new("connectionStatus").const_().ret::<i32>())
         .signal(QObjectSignal::new("connectionStatusChanged").arg::<i32>("status"))
@@ -137,6 +137,7 @@ fn main() {
         .slot(QObjectMethod::new("pause"))
         .slot(QObjectMethod::new("next"))
         .slot(QObjectMethod::new("previous"))
+        .slot(QObjectMethod::new("updatePosition"))
         // private slots
         .slot(QObjectMethod::new("_onPlayerEvent"))
         .build(&cpp, &moc);
