@@ -13,7 +13,7 @@ HttpRequest {
     }
 
     function search(query, type) {
-        executeApi("GET", "search", {"q": query, "type": type})
+        executeApi("GET", "search", {"q": query, "type": type, "market": "from_token" })
     }
 
     function play(trackUri, contextUri, deviceId, positionMs) {
@@ -37,7 +37,6 @@ HttpRequest {
     }
 
     function executeApi(method, path, params, data) {
-        console.log("Web API " + method + " " + path)
         if (!accessToken) {
             console.error("Request without token not possible")
             return

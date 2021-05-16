@@ -19,6 +19,8 @@ Page {
         placeholder: qsTr("This album has no tracks")
 
         header: Column {
+            width: page.width
+
             readonly property string _imageUrl: {
                 var images = album.images
                 if (images) {
@@ -45,17 +47,50 @@ Page {
             PageHeader {
                 title: album.name
             }
+
+            ColumnView {
+                width: parent.width
+                model: album.copyrights
+                itemHeight: Theme.itemSizeSmall
+                delegate: Label {
+                    anchors {
+                        left: parent.left
+                        leftMargin: Theme.horizontalPageMargin
+                        right: parent.right
+                    }
+                    text: modelData.text
+                }
+            }
         }
 
-        delegate: ResultListItem {
+        delegate: AlbumTrackListItem {
             id: itemItem
-            // TODO: track_number / duration_ms / disc_number / explicit
+            // TODO: explicit
 
             name_: name
             playing: librespot.trackUri === uri
-            fallbackIcon: "image://theme/icon-m-media-songs"
+            trackNumber: track_number
+            artists_: artists
+            durationMs: duration_ms
 
             onClicked: request.play(uri, "spotify:album:" + albumId, librespot.deviceId)
+        }
+
+        section {
+            property: "disc_number"
+            delegate: sectionHeading
+        }
+
+        Component {
+            id: sectionHeading
+
+            Label {
+                id: sectionLabel
+
+                x: Theme.horizontalPageMargin
+                font.bold: true
+                text: qsTr("Disc %1").arg(section)
+            }
         }
     }
 

@@ -93,7 +93,7 @@ ListModel {
     // APIS
 
     function fetchArtistsAlbums(artistId, include_groups) {
-        var params = {}
+        var params = { market: "from_token" }
         if (include_groups) {
             params["include_groups"] = include_groups
         }
@@ -101,7 +101,7 @@ ListModel {
     }
 
     function fetchAlbumsTracks(albumId) {
-        fetchFirst("albums/" + albumId + "/tracks")
+        fetchFirst("albums/" + albumId + "/tracks", { market: "from_token" })
     }
 
     function fetchSavedTracks() {
@@ -122,7 +122,8 @@ ListModel {
 
     function search(query, type) {
         var params = {
-            q: query
+            q: query,
+            market: "from_token"
         }
         if (type) {
             params["type"] = type

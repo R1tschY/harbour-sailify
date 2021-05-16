@@ -162,6 +162,7 @@ QtObject {
             url += '?' + _paramsToQueryString(config.params)
         }
 
+        console.debug("HTTP " + config.method + " " + url)
         req.open(config.method.toUpperCase(), url, true);
 
         var headers = config.headers

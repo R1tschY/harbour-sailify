@@ -5,6 +5,7 @@ TARGET = harbour-sailify
 CONFIG += sailfishapp
 
 DISTFILES += qml/*.qml \
+    qml/components/AlbumTrackListItem.qml \
     qml/components/CurrentlyPlayingMetadata.qml \
     qml/components/CurrentlyPlayingPanel.qml \
     qml/components/IconListItem.qml \
@@ -21,4 +22,5 @@ DISTFILES += qml/*.qml \
     qml/pages/PlaylistsPage.qml \
     qml/pages/SavedTracksPage.qml \
     qml/pages/SearchPage.qml \
-    qml/pages/TopTracksPage.qml
+    qml/pages/TopTracksPage.qml \
+    qml/spotifyUtils.js
