@@ -9,6 +9,7 @@ SilicaListView {
     property alias dataDelegate: listModel.dataDelegate
 
     property bool _complete: false
+    property int _overflowHeight: contentHeight - height - headerItem.height
 
     id: root
     anchors.fill: parent
@@ -41,7 +42,7 @@ SilicaListView {
     function ensureContent() {
         if (_complete
                 && !listModel.completlyFetched
-                && contentHeight - contentY - height < 1000) {
+                && _overflowHeight - contentY < 1000) {
             listModel.fetchNext()
         }
     }
@@ -66,7 +67,7 @@ SilicaListView {
     ViewPlaceholder {
         id: viewPlaceholder
         enabled: !listModel.busy && !listModel.errorType && listView.count === 0
-        text: qsTr("No items found")
+        text: root.placeholder
     }
 
     VerticalScrollDecorator { flickable: root }
