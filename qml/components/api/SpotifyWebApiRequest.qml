@@ -16,6 +16,10 @@ HttpRequest {
         executeApi("GET", "search", {"q": query, "type": type, "market": "from_token" })
     }
 
+    function getAlbum(albumId) {
+        executeApi("GET", "albums/" + albumId, { market: "from_token" })
+    }
+
     function play(trackUri, contextUri, deviceId, positionMs) {
         var params = {}
         if (deviceId) {

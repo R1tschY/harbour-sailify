@@ -57,6 +57,7 @@ ListItem {
             left: trackNumberLabel.right
             leftMargin: Theme.paddingSmall
             right: parent.right
+            rightMargin: Theme.horizontalPageMargin
             bottom: parent.verticalCenter
         }
     }

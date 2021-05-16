@@ -11,6 +11,10 @@ Page {
 
     SpotifyWebApiRequest {
         id: request
+
+        onSuccess: {
+            page.album = response.data
+        }
     }
 
     PageListView {
@@ -52,13 +56,18 @@ Page {
                 width: parent.width
                 model: album.copyrights
                 itemHeight: Theme.itemSizeSmall
+
                 delegate: Label {
                     anchors {
                         left: parent.left
                         leftMargin: Theme.horizontalPageMargin
                         right: parent.right
+                        rightMargin: Theme.horizontalPageMargin
                     }
+
+                    truncationMode: TruncationMode.Fade
                     text: modelData.text
+                    font.pixelSize: Theme.fontSizeExtraSmall
                 }
             }
         }
@@ -96,5 +105,6 @@ Page {
 
     // TODO: copyrights[].text, artists[].name, release_date
 
+    // TODO: fetch album and init model with track information
     onAlbumIdChanged: listView.model.fetchAlbumsTracks(albumId)
 }
