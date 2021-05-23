@@ -28,6 +28,12 @@ ApplicationWindow
     CurrentlyPlayingMetadata {
         id: playingMetadata
     }
+
+    KeyValueStorage {
+        id: keyValueStorage
+
+        dataBaseId: "configuration"
+    }
 }
 
 
