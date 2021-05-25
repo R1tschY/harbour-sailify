@@ -15,7 +15,7 @@ ListModel {
     property string errorType
     property string errorMessage
 
-    property int _nextOffset: 0
+    property int _nextOffset: -1
     property string _path
     property var _params: null
 
@@ -53,7 +53,10 @@ ListModel {
             model._nextOffset = data.offset + data.limit
 
             for (var i = 0; i < items.length; i++) {
-                model.append(items[i])
+                var item = items[i]
+                if (item.is_playable !== false) {
+                    model.append(items[i])
+                }
             }
         }
 

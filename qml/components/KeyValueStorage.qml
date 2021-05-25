@@ -75,13 +75,13 @@ QtObject {
         _db.transaction(function (tx) {
             tx.executeSql(
                 'INSERT INTO events (type, timestamp, value) VALUES (?, ?, ?)',
-                [key, timestamp, JSON.stringify(value)])
+                [type, timestamp, JSON.stringify(value)])
         })
     }
 
     function clearEvents() {
         _db.transaction(function (tx) {
-            tx.executeSql('DELETE FROM events; VACUUM', [key])
+            tx.executeSql('DELETE FROM events; VACUUM')
         })
     }
 }

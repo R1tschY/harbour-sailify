@@ -11,10 +11,6 @@ Page {
 
     SpotifyWebApiRequest {
         id: request
-
-        onSuccess: {
-            page.album = response.data
-        }
     }
 
     PageListView {

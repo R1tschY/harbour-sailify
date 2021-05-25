@@ -9,7 +9,7 @@ HttpRequest {
     }
 
     function getTrack(trackId) {
-        executeApi("GET", "tracks/" + trackId)
+        executeApi("GET", "tracks/" + trackId, { market: "from_token" })
     }
 
     function search(query, type) {
@@ -37,10 +37,10 @@ HttpRequest {
             body["position_ms"] = positionMs
         }
 
-        executeApi("PUT", "me/player/play", params, body)
+        executeApi("PUT", "me/player/play", params, body, "text")
     }
 
-    function executeApi(method, path, params, data) {
+    function executeApi(method, path, params, data, responseType) {
         if (!accessToken) {
             console.error("Request without token not possible")
             return
@@ -52,7 +52,7 @@ HttpRequest {
             "headers": {
                 "Authorization": "Bearer " + accessToken
             },
-            "responseType": "json",
+            "responseType": responseType || "json",
             "params": params,
             "data": data
         })

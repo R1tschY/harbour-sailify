@@ -7,9 +7,8 @@ Object {
         accessToken: librespot.token
 
         onSuccess: {
-            console.log(JSON.stringify(response))
             var data = response.data
-            uri = data.uri
+            uri = data.uri || ""
             name = data.name
             trackNumber = data.track_number
             albumName = data.album.name
