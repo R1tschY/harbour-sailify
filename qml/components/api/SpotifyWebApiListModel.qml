@@ -72,6 +72,16 @@ ListModel {
         _fetch()
     }
 
+    function reset() {
+        total = -1
+        _nextOffset = -1
+        _path = ""
+        _params = null
+
+        request.abort()
+        model.clear()
+    }
+
     function fetchNext() {
         if (_nextOffset < total && !busy) {
             _fetch()
