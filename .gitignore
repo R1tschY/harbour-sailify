@@ -3,6 +3,7 @@
 /installroot
 /rpmbuildroot
 /.cargo*
+/.tmp
 
 *~
 *.list

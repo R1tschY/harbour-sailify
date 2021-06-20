@@ -15,7 +15,6 @@ BuildRequires:  pkgconfig(libpulse)
 BuildRequires:  pkgconfig(openssl)
 BuildRequires:  desktop-file-utils
 BuildRequires:  rust
-BuildRequires:  rustc
 BuildRequires:  cargo
 
 
@@ -31,6 +30,9 @@ A Spotify client for Sailfish OS focused on usability and stability.
 
 export $(egrep -v '^#' %{_sourcedir}/../.env | xargs)
 export RUSTFLAGS="-Clink-arg=-Wl,-z,relro,-z,now -Ccodegen-units=1"
+export TMPDIR=%{_sourcedir}/../.tmp
+
+mkdir -p "$TMPDIR"
 
 # release
 export CARGO_INCREMENTAL=0
