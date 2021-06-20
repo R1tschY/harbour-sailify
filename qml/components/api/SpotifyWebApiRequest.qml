@@ -5,7 +5,7 @@ HttpRequest {
     property string accessToken: librespot.token
 
     function getCurrentPlayback() {
-        executeApi("GET", "me/player")
+        executeApi("GET", "me/player", { market: "from_token" })
     }
 
     function getTrack(trackId) {
