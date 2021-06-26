@@ -11,11 +11,8 @@ fn apply_pkg_config(build: &mut cpp_build::Config, config: &pkg_config::Library)
     }
 }
 
-
 fn main() {
-    let sailfishapp = pkg_config::Config::new()
-        .probe("sailfishapp")
-        .unwrap();
+    let sailfishapp = pkg_config::Config::new().probe("sailfishapp").unwrap();
     let qt5quick = pkg_config::Config::new()
         .atleast_version("5.6")
         .probe("Qt5Quick")

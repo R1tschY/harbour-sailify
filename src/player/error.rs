@@ -8,7 +8,7 @@ quick_error! {
         }
 
         IllegalConfig(msg: String) {
-            display("Illegal config: {}", msg)
+            display("Illegal configuration: {}", msg)
         }
 
         Io(err: std::io::Error) {

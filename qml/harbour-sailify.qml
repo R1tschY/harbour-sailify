@@ -34,6 +34,8 @@ ApplicationWindow
 
         dataBaseId: "configuration"
     }
+
+    Mpris2Adapter { }
 }
 
 

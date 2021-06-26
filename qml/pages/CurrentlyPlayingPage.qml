@@ -85,10 +85,10 @@ Page {
                                                   : "image://theme/icon-l-pause"
 
                     onClicked: {
-                        if (librespot.paused) {
-                            librespot.play()
-                        } else {
+                        if (librespot.playbackStatus === "playing") {
                             librespot.pause()
+                        } else {
+                            librespot.play()
                         }
                     }
                 }

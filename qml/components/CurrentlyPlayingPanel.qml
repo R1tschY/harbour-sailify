@@ -86,14 +86,14 @@ DockedPanel {
                 bottom: albumArt.bottom
             }
 
-            icon.source: librespot.paused ? "image://theme/icon-m-play"
-                                          : "image://theme/icon-m-pause"
+            icon.source: librespot.playbackStatus === "playing" ? "image://theme/icon-m-play"
+                                                                : "image://theme/icon-m-pause"
 
             onClicked: {
-                if (librespot.paused) {
-                    librespot.play()
-                } else {
+                if (librespot.playbackStatus === "playing") {
                     librespot.pause()
+                } else {
+                    librespot.play()
                 }
             }
         }

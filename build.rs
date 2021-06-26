@@ -62,9 +62,9 @@ fn main() {
                 .notify("trackUriChanged"),
         )
         .property(
-            QObjectProp::new::<bool>("paused")
-                .read("paused")
-                .notify("pausedChanged"),
+            QObjectProp::new::<QString>("playbackStatus")
+                .read("playbackStatus")
+                .notify("playbackStatusChanged"),
         )
         .property(
             QObjectProp::new::<u32>("position")
@@ -114,8 +114,12 @@ fn main() {
         .method(QObjectMethod::new("trackUri").const_().ret::<QString>())
         .signal(QObjectSignal::new("trackUriChanged").arg::<&QString>("value"))
         // paused
-        .method(QObjectMethod::new("paused").const_().ret::<bool>())
-        .signal(QObjectSignal::new("pausedChanged").arg::<bool>("value"))
+        .method(
+            QObjectMethod::new("playbackStatus")
+                .const_()
+                .ret::<QString>(),
+        )
+        .signal(QObjectSignal::new("playbackStatusChanged"))
         // position
         .method(QObjectMethod::new("position").const_().ret::<u32>())
         .signal(QObjectSignal::new("positionChanged").arg::<u32>("value"))

@@ -365,8 +365,13 @@ impl LibrespotPrivate {
 
     // paused
 
-    pub fn paused(&self) -> bool {
-        self.state == PlayerState::Paused
+    pub fn playback_status(&self) -> QString {
+        match self.state {
+            PlayerState::Stopped => "stopped",
+            PlayerState::Playing => "playing",
+            PlayerState::Paused => "paused",
+        }
+        .to_qstring()
     }
 
     // position
@@ -387,7 +392,7 @@ impl LibrespotPrivate {
 
         if self.state != state {
             self.state = state;
-            unsafe { &mut *self.qobject }.paused_changed(self.paused());
+            unsafe { &mut *self.qobject }.playback_status_changed();
         }
 
         if self.position_ms != value {

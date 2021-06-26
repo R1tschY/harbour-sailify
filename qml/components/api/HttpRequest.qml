@@ -107,7 +107,7 @@ QtObject {
 
             var readyState = req.readyState
             request.readyState = readyState
-            if (readyState !== 4) {
+            if (readyState !== 4 || req.status === 0) {
                 return
             }
 
@@ -119,7 +119,6 @@ QtObject {
             } else {
                 resData = req.response
             }
-            // console.log("FINISHED " + JSON.stringify(resData))
 
             var response = {
                 data: resData,

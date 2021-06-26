@@ -2,6 +2,8 @@ import QtQuick 2.0
 import "api"
 
 Object {
+    id: metadata
+
     SpotifyWebApiRequest {
         id: request
         accessToken: librespot.token
@@ -11,19 +13,26 @@ Object {
             uri = data.uri || ""
             name = data.name
             trackNumber = data.track_number
+            discNumber = data.disc_number
             albumName = data.album.name
             albumImage = data.album.images[0].url
-            artists = data.artists.map(function(artist) { return artist.name; }).join(", ")
+            artistsAsList = data.artists.map(function(artist) { return artist.name; })
+            artists = artistsAsList.join(", ")
+            metadataChanged()
         }
     }
 
     property string uri: ""
     property string name: ""
     property string artists: ""
+    property var artistsAsList: []
     property int trackNumber: -1
+    property int discNumber: -1
 
     property string albumName: ""
     property string albumImage: ""
+
+    signal metadataChanged()
 
     Connections {
         target: librespot
