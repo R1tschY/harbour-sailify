@@ -7,6 +7,7 @@ QtObject {
 
     //! Error of last request
     property string errorType: ""
+    property string errorMessage: ""
 
     //! XMLHttpRequest.readyState of last request
     //! 0 UNSENT
@@ -34,7 +35,7 @@ QtObject {
     // signals
 
     signal finished(var response)
-    signal error(string errorType)
+    signal error(string errorType, string errorMessage)
     signal success(var response)
 
     // functions
@@ -184,9 +185,10 @@ QtObject {
         return req
     }
 
-    function _finishWithError(errorType) {
+    function _finishWithError(errorType, errorMessage) {
         request.errorType = errorType
-        request.error(errorType)
+        request.errorMessage = errorMessage
+        request.error(errorType, errorMessage)
         request.finished(null)
     }
 

@@ -1,8 +1,49 @@
 import QtQuick 2.0
+import Nemo.Notifications 1.0
 import "."
+import ".."
 
-HttpRequest {
+Object {
+    id: root
+
     property string accessToken: librespot.token
+    property alias busy: request.busy
+
+    Notification {
+        id: notification
+    }
+
+    function _sendError(errorType, errorMessage) {
+        notification.previewSummary = errorMessage
+        notification.publish()
+        console.error("Web API error: " + errorType + ": " + errorMessage)
+        root.error(errorType, errorMessage)
+    }
+
+    HttpRequest {
+        id: request
+
+        onFinished: root.finished(response)
+
+        onSuccess: {
+            if (response.status >= 200 && response.status < 300) {
+                root.success(response)
+            } else {
+                var error = response.data.error || {}
+                _sendError("http-" + response.status, error.message || error.reason || "")
+            }
+        }
+
+        onError: _sendError(errorType, errorMessage)
+    }
+
+    // signals
+
+    signal finished(var response)
+    signal error(string errorType, string errorMessage)
+    signal success(var response)
+
+    // calls
 
     function getCurrentPlayback() {
         executeApi("GET", "me/player", { market: "from_token" })
@@ -46,7 +87,7 @@ HttpRequest {
             return
         }
 
-        execute({
+        request.execute({
             "method": method,
             "url": "https://api.spotify.com/v1/" + path,
             "headers": {

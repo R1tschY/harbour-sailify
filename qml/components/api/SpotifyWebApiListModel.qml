@@ -24,13 +24,6 @@ ListModel {
         onSuccess: {
             var data = response.data
 
-            if (response.status !== 200) {
-                model.errorType = response.status
-                model.errorMessage = data.error.message
-                console.error("Web API Error " + model.errorType + ": " + model.errorMessage)
-                return;
-            }
-
             if (dataDelegate) {
                 data = dataDelegate(data)
             }
@@ -58,10 +51,6 @@ ListModel {
                     model.append(items[i])
                 }
             }
-        }
-
-        onError: {
-            model.errorType = errorType
         }
     }
 
