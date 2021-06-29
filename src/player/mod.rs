@@ -1,9 +1,10 @@
-use std::env;
 use std::fs;
 use std::io;
 use std::path::PathBuf;
+use std::sync::Mutex;
 use std::thread;
 use std::thread::JoinHandle;
+use std::{env, panic};
 
 use futures::channel::mpsc::{unbounded, UnboundedSender};
 use futures::{FutureExt, TryFutureExt};
@@ -21,8 +22,8 @@ use uuid::Uuid;
 
 use crate::player::controller::{ControlMessage, LibrespotConfig, LibrespotController};
 use crate::player::error::{LibrespotError, LibrespotResult};
-use crate::player::qtgateway::LibrespotGateway;
-use crate::utils::{xdg, UnsafeSend};
+use crate::player::qtgateway::{LibrespotEvent, LibrespotGateway};
+use crate::utils::xdg;
 
 pub mod controller;
 pub mod error;
@@ -212,28 +213,37 @@ impl LibrespotThread {
     }
 
     pub fn run(gateway: LibrespotGateway, options: Options) -> LibrespotResult<Self> {
-        let sendable_gateway = UnsafeSend::new(gateway);
         let setup = setup(options)?;
 
         let (control_tx, control_rx) = unbounded();
         let control_tx_ = control_tx.clone();
+
+        let x = Mutex::new((control_tx, control_rx));
         let handle = thread::Builder::new()
             .name("librespot".to_string())
             .spawn(move || {
-                info!("CORE START");
-                {
+                let gateway_clone = gateway.clone();
+                let result = panic::catch_unwind(move || {
+                    info!("CORE START");
                     let mut core = Core::new().unwrap();
+
+                    let (control_tx, control_rx) = x.into_inner().unwrap();
 
                     let controller_future = LibrespotController::run(
                         core.handle(),
                         control_tx,
                         control_rx,
-                        unsafe { sendable_gateway.unwrap() },
+                        gateway_clone,
                         setup,
                     );
                     let _ = core.run(Box::pin(controller_future.unit_error()).compat());
+                    info!("CORE END");
+                });
+                if let Err(err) = result {
+                    info!("CORE CRASH");
+                    gateway.send(LibrespotEvent::Panic);
+                    panic::resume_unwind(err);
                 }
-                info!("CORE END");
             })
             .unwrap();
 

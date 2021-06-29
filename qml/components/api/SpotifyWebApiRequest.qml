@@ -30,7 +30,9 @@ Object {
                 root.success(response)
             } else {
                 var error = response.data.error || {}
-                _sendError("http-" + response.status, error.message || error.reason || "")
+                _sendError(
+                    "http-" + response.status,
+                    error.message || error.reason || (response.status + ": " + JSON.stringify(response.data)))
             }
         }
 

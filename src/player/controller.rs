@@ -1,5 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::time::Instant;
 
 use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
@@ -69,7 +67,7 @@ pub struct LibrespotController {
     credentials: Credentials,
     auto_connect_times: Vec<Instant>,
 
-    gateway: Rc<RefCell<LibrespotGateway>>,
+    gateway: LibrespotGateway,
 }
 
 impl LibrespotController {
@@ -97,7 +95,7 @@ impl LibrespotController {
             control_rx,
             control_tx,
 
-            gateway: Rc::new(RefCell::new(gateway)),
+            gateway,
         };
         self_.run_internal().await;
     }
@@ -131,7 +129,7 @@ impl LibrespotController {
     async fn login(&mut self) -> bool {
         info!("Logging in ...");
         self.spirc = None;
-        self.gateway.borrow_mut().send(LibrespotEvent::Connecting);
+        self.gateway.send(LibrespotEvent::Connecting);
 
         // connect with credentials
         let session_future = Session::connect(
@@ -144,11 +142,9 @@ impl LibrespotController {
             Ok(session) => session,
             Err(error) => {
                 error!("Could not connect to server: {}", error);
-                self.gateway
-                    .borrow_mut()
-                    .send(LibrespotEvent::ConnectionError {
-                        message: format!("{}", error),
-                    });
+                self.gateway.send(LibrespotEvent::ConnectionError {
+                    message: format!("{}", error),
+                });
                 return false;
             }
         };
@@ -181,7 +177,7 @@ impl LibrespotController {
             event_channel
                 .for_each(move |event| {
                     if let Some(evt) = LibrespotEvent::from_event(event) {
-                        gateway.borrow_mut().send(evt);
+                        gateway.send(evt);
                     }
                     futures_01::future::ok(())
                 })
@@ -190,16 +186,14 @@ impl LibrespotController {
 
         // get token
         let token = get_token(&session, CLIENT_ID, SCOPES).compat().await.ok();
-        self.gateway
-            .borrow_mut()
-            .send(LibrespotEvent::TokenChanged { token });
-        self.gateway.borrow_mut().send(LibrespotEvent::Connected);
+        self.gateway.send(LibrespotEvent::TokenChanged { token });
+        self.gateway.send(LibrespotEvent::Connected);
 
         true
     }
 
     fn shutdown(&mut self) {
-        self.gateway.borrow_mut().send(LibrespotEvent::Shutdown);
+        self.gateway.send(LibrespotEvent::Shutdown);
         if let Some(ref spirc) = self.spirc {
             spirc.shutdown();
         }
@@ -207,9 +201,7 @@ impl LibrespotController {
 
     async fn autoreconnect(&mut self) -> bool {
         warn!("Spirc shut down unexpectedly");
-        self.gateway
-            .borrow_mut()
-            .send(LibrespotEvent::StartReconnect);
+        self.gateway.send(LibrespotEvent::StartReconnect);
 
         let now = Instant::now();
         while (!self.auto_connect_times.is_empty())
@@ -220,12 +212,9 @@ impl LibrespotController {
 
         if self.auto_connect_times.len() >= 5 {
             warn!("Spirc shut down too often. Not reconnecting automatically.");
-            self.gateway
-                .borrow_mut()
-                .send(LibrespotEvent::ConnectionError {
-                    message: "Spirc shut down too often. Not reconnecting automatically."
-                        .to_string(),
-                });
+            self.gateway.send(LibrespotEvent::ConnectionError {
+                message: "Spirc shut down too often. Not reconnecting automatically.".to_string(),
+            });
             false
         } else {
             self.auto_connect_times.push(now);

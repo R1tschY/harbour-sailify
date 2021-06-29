@@ -50,9 +50,6 @@ Object {
 
         onMetadataChanged: {
             var metadata = playingMetadata
-
-            console.log(Mpris.metadataToString(Mpris.TrackId))
-
             if (metadata.uri) {
                 mpris2Adapter.metadata = {
                     "mpris:trackid": "/" + metadata.uri.replace(/:/g, "/"),

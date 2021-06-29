@@ -139,19 +139,19 @@ QtObject {
 
         req.onabort = function() {
             if (!req) return;
-            _finishWithError("aborted")
+            _finishWithError("aborted", qsTr("Request aborted"))
             req = null;
         }
 
         req.onerror = function() {
             if (!req) return;
-            _finishWithError("network-error")
+            _finishWithError("network-error", qsTr("Network error, please check your connection"))
             req = null;
         }
 
         req.ontimeout = function() {
             if (!req) return;
-            _finishWithError("timeout")
+            _finishWithError("timeout", qsTr("Timeout error, please check your connection"))
             req = null;
         }
 
@@ -187,8 +187,8 @@ QtObject {
 
     function _finishWithError(errorType, errorMessage) {
         request.errorType = errorType
-        request.errorMessage = errorMessage
-        request.error(errorType, errorMessage)
+        request.errorMessage = errorMessage || ""
+        request.error(errorType, errorMessage || "")
         request.finished(null)
     }
 

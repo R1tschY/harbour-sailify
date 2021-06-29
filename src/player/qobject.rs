@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 use librespot_core::keymaster::Token;
 use log::{error, info, warn};
 use qt5qml::core::QObject;
-use qt5qml::core::{ConnectionTypeKind, QObjectRef, QString, TimerType};
+use qt5qml::core::{ConnectionTypeKind, QObjectRef, QString};
 use qt5qml::core::{QTimer, ToQString};
 use qt5qml::{cstr, slot, QBox};
 
@@ -41,6 +41,8 @@ pub enum ConnectionStatus {
     Disconnected = 0,
     Connecting = 1,
     Connected = 2,
+
+    Crashed = 100,
 }
 
 pub struct LibrespotPrivate {
@@ -206,6 +208,12 @@ impl LibrespotPrivate {
                 self.set_position(0, PlayerState::Stopped);
             }
             LibrespotEvent::TokenChanged { token } => self.set_token(token),
+            LibrespotEvent::Panic => {
+                self.set_connection_status(ConnectionStatus::Crashed);
+                self.set_media_status(MediaStatus::NoMedia);
+                self.set_position(0, PlayerState::Stopped);
+                self.thread = None;
+            }
         }
     }
 

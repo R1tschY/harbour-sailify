@@ -1,4 +1,4 @@
-use std::sync::mpsc;
+use std::sync::{mpsc, Arc, Mutex};
 
 use librespot_core::keymaster::Token;
 use librespot_playback::player::PlayerEvent;
@@ -49,6 +49,7 @@ pub enum LibrespotEvent {
     TokenChanged {
         token: Option<Token>,
     },
+    Panic,
 }
 
 impl LibrespotEvent {
@@ -120,10 +121,13 @@ mod details {
     }
 }
 
-pub struct LibrespotGateway {
+struct LibrespotGatewaySender {
     qobject: QBox<details::LibrespotGateway>,
     tx: mpsc::Sender<LibrespotEvent>,
 }
+
+#[derive(Clone)]
+pub struct LibrespotGateway(Arc<Mutex<LibrespotGatewaySender>>);
 
 impl LibrespotGateway {
     pub fn new(parent: &QObject, tx: mpsc::Sender<LibrespotEvent>) -> Self {
@@ -138,14 +142,18 @@ impl LibrespotGateway {
         );
         qobject.move_to_thread(None);
 
-        Self { qobject, tx }
+        Self(Arc::new(Mutex::new(LibrespotGatewaySender { qobject, tx })))
     }
 
-    pub fn send(&mut self, evt: LibrespotEvent) {
-        if let Err(_) = self.tx.send(evt) {
-            warn!("Failed to send librespot event to qt thread");
+    pub fn send(&self, evt: LibrespotEvent) {
+        if let Ok(mut locked) = self.0.lock() {
+            if let Err(_) = locked.tx.send(evt) {
+                warn!("Failed to send librespot event to Qt thread: other end is already closed");
+            } else {
+                locked.qobject.player_event();
+            }
         } else {
-            self.qobject.player_event();
+            warn!("Failed to send librespot event to Qt thread: mutex is poisoned");
         }
     }
 }
