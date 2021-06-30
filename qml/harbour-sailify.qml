@@ -36,6 +36,10 @@ ApplicationWindow
     }
 
     Mpris2Adapter { }
+
+    NetworkMonitor {
+        id: networkMonitor
+    }
 }
 
 

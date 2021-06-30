@@ -12,6 +12,7 @@ DISTFILES += qml/*.qml \
     qml/components/KeyValueStorage.qml \
     qml/components/Mpris2Adapter.qml \
     qml/components/NavigationItem.qml \
+    qml/components/NetworkMonitor.qml \
     qml/components/Object.qml \
     qml/components/PageListView.qml \
     qml/components/PressEffect.qml \
