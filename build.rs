@@ -77,10 +77,11 @@ fn main() {
                 .notify("durationChanged"),
         )
         .property(
-            QObjectProp::new::<QString>("token")
-                .read("token")
-                .notify("tokenChanged"),
+            QObjectProp::new::<QString>("accessToken")
+                .read("accessToken")
+                .notify("accessTokenChanged"),
         )
+        .property(QObjectProp::new::<QString>("accessTokenExpiresIn").read("accessTokenExpiresIn"))
         .property(
             QObjectProp::new::<QString>("deviceId")
                 .read("deviceId")
@@ -127,8 +128,14 @@ fn main() {
         .method(QObjectMethod::new("duration").const_().ret::<u32>())
         .signal(QObjectSignal::new("durationChanged").arg::<u32>("value"))
         // token
-        .method(QObjectMethod::new("token").const_().ret::<QString>())
-        .signal(QObjectSignal::new("tokenChanged").arg::<&QString>("value"))
+        .method(QObjectMethod::new("accessToken").const_().ret::<QString>())
+        .method(
+            QObjectMethod::new("accessTokenExpiresIn")
+                .const_()
+                .ret::<i32>(),
+        )
+        .signal(QObjectSignal::new("accessTokenChanged"))
+        .method(QObjectMethod::new("refreshAccessToken"))
         // device id
         .method(QObjectMethod::new("deviceId").const_().ret::<QString>())
         // device name

@@ -276,4 +276,8 @@ impl LibrespotThread {
     pub fn previous(&self) {
         let _ = self.control.unbounded_send(ControlMessage::Previous);
     }
+
+    pub fn refresh_token(&self) {
+        let _ = self.control.unbounded_send(ControlMessage::RefreshToken);
+    }
 }

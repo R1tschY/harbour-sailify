@@ -47,7 +47,7 @@ pub enum LibrespotEvent {
     Shutdown,
     StartReconnect,
     TokenChanged {
-        token: Option<Token>,
+        token: Result<Token, String>,
     },
     Panic,
 }

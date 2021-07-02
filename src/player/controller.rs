@@ -29,6 +29,8 @@ pub enum ControlMessage {
     Next,
     Previous,
 
+    RefreshToken,
+
     // internal
     AutoReconnect,
 }
@@ -63,6 +65,7 @@ pub struct LibrespotController {
     control_tx: UnboundedSender<ControlMessage>,
 
     spirc: Option<Spirc>,
+    session: Option<Session>,
 
     credentials: Credentials,
     auto_connect_times: Vec<Instant>,
@@ -90,6 +93,8 @@ impl LibrespotController {
             mixer_config: setup.mixer_config,
 
             spirc: None,
+            session: None,
+
             credentials: setup.credentials,
             auto_connect_times: Vec::new(),
             control_rx,
@@ -121,6 +126,20 @@ impl LibrespotController {
                             return;
                         }
                     }
+                    ControlMessage::RefreshToken => {
+                        if let Some(session) = &self.session {
+                            let gateway = self.gateway.clone();
+                            self.handle
+                                .spawn(get_token(&session, CLIENT_ID, SCOPES).then(
+                                    move |result| {
+                                        let evt_data = result.map_err(|err| format!("{:?}", err));
+                                        gateway
+                                            .send(LibrespotEvent::TokenChanged { token: evt_data });
+                                        futures_01::future::ok::<(), ()>(())
+                                    },
+                                ));
+                        }
+                    }
                 };
             }
         }
@@ -148,6 +167,7 @@ impl LibrespotController {
                 return false;
             }
         };
+        self.session = Some(session.clone());
         info!("Connected");
 
         // setup
@@ -185,7 +205,10 @@ impl LibrespotController {
         );
 
         // get token
-        let token = get_token(&session, CLIENT_ID, SCOPES).compat().await.ok();
+        let token = get_token(&session, CLIENT_ID, SCOPES)
+            .compat()
+            .await
+            .map_err(|err| format!("{:?}", err));
         self.gateway.send(LibrespotEvent::TokenChanged { token });
         self.gateway.send(LibrespotEvent::Connected);
 

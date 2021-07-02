@@ -54,7 +54,7 @@ pub struct LibrespotPrivate {
     thread: Option<LibrespotThread>,
     options: Options,
 
-    token: Option<String>,
+    access_token: Option<(String, Instant)>,
 
     error_kind: Option<String>,
     error_string: Option<String>,
@@ -94,7 +94,7 @@ impl LibrespotPrivate {
             thread: None,
             options: Options::new(),
 
-            token: None,
+            access_token: None,
 
             error_kind: None,
             error_string: None,
@@ -207,7 +207,7 @@ impl LibrespotPrivate {
                 self.set_connection_status(ConnectionStatus::Connecting);
                 self.set_position(0, PlayerState::Stopped);
             }
-            LibrespotEvent::TokenChanged { token } => self.set_token(token),
+            LibrespotEvent::TokenChanged { token } => self.set_access_token(token),
             LibrespotEvent::Panic => {
                 self.set_connection_status(ConnectionStatus::Crashed);
                 self.set_media_status(MediaStatus::NoMedia);
@@ -431,13 +431,40 @@ impl LibrespotPrivate {
 
     // token
 
-    pub fn token(&self) -> QString {
-        self.token.to_qstring()
+    pub fn access_token(&self) -> QString {
+        self.access_token
+            .as_ref()
+            .map(|t| &t.0 as &str)
+            .to_qstring()
     }
 
-    fn set_token(&mut self, value: Option<Token>) {
-        self.token = value.map(|t| t.access_token);
-        unsafe { &mut *self.qobject }.token_changed(&self.token.to_qstring());
+    pub fn access_token_expires_in(&self) -> i32 {
+        self.access_token
+            .as_ref()
+            .map(|t| Instant::now().duration_since(t.1).as_secs() as i32)
+            .unwrap_or(-1)
+    }
+
+    fn set_access_token(&mut self, value: Result<Token, String>) {
+        match value {
+            Ok(token) => {
+                self.access_token = Some((
+                    token.access_token,
+                    Instant::now() + Duration::from_secs(token.expires_in as u64),
+                ))
+            }
+            Err(err) => {
+                self.access_token = None;
+                warn!("Failed to get token: {}", err);
+            }
+        }
+        unsafe { &mut *self.qobject }.access_token_changed();
+    }
+
+    pub fn refresh_access_token(&self) {
+        if let Some(ref thread) = &self.thread {
+            thread.refresh_token()
+        }
     }
 
     // device id
