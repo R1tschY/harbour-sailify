@@ -6,7 +6,7 @@ import ".."
 Object {
     id: root
 
-    property string accessToken: librespot.token
+    property string accessToken: librespot.accessToken
     property alias busy: request.busy
 
     Notification {

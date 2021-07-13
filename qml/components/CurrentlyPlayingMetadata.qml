@@ -6,7 +6,7 @@ Object {
 
     SpotifyWebApiRequest {
         id: request
-        accessToken: librespot.token
+        accessToken: librespot.accessToken
 
         onSuccess: {
             var data = response.data
