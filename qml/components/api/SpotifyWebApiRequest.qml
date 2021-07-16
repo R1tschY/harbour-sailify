@@ -32,7 +32,7 @@ Object {
                 var error = response.data.error || {}
                 _sendError(
                     "http-" + response.status,
-                    error.message || error.reason || (response.status + ": " + JSON.stringify(response.data)))
+                    error.message || (response.status + ": " + JSON.stringify(response.data)))
             }
         }
 
