@@ -42,9 +42,34 @@ Page {
                                })
             }
         }
+
+        section {
+            property: "album_group"
+            delegate: sectionHeading
+        }
+
+        Component {
+            id: sectionHeading
+
+            SectionHeader {
+                id: sectionLabel
+
+                x: Theme.horizontalPageMargin
+                text: {
+                    switch (section) {
+                        case "album": return qsTr("Albums")
+                        case "single": return qsTr("Singles and EPs")
+                        case "appears_on": return qsTr("Appears on")
+                        case "compilation": return qsTr("Compilations")
+                        default: return "UNKNOWN"
+                    }
+                }
+            }
+        }
     }
 
     Component.onCompleted: {
-        listView.model.fetchArtistsAlbums(artistId, ["album"])
+        listView.model.fetchArtistsAlbums(
+            artistId, ["album", "single", "appears_on", "compilation"])
     }
 }
