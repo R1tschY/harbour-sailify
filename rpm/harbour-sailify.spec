@@ -1,7 +1,7 @@
 Name:       harbour-sailify
 Summary:    User-friendly Spotify client for Sailfish OS
-Version:    1.0
-Release:    1
+Version:    0.1
+Release:    0
 Group:      Qt/Qt
 License:    LICENSE
 URL:        http://example.org/
