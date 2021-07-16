@@ -25,3 +25,17 @@ function durationMsToString(durationMs) {
         return min + ":0" + sec
     }
 }
+
+function chooseImage(imagesObject, size) {
+    if (imagesObject) {
+        if (imagesObject.length > 0) {
+            return imagesObject[0].url
+        } else if (imagesObject.count > 0) {
+            return imagesObject.get(0).url
+        } else {
+            return ""
+        }
+    } else {
+        return ""
+    }
+}

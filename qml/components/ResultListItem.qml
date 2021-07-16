@@ -18,6 +18,7 @@
 import QtQuick 2.6
 import Sailfish.Silica 1.0
 import QtGraphicalEffects 1.0
+import "../spotifyUtils.js" as SpotifyUtils
 
 ListItem {
     id: root
@@ -29,19 +30,7 @@ ListItem {
     property bool playing: false
     property string fallbackIcon: "image://theme/icon-m-music"
 
-    readonly property string _image: {
-        if (images_) {
-            if (images_.length > 0) {
-                return images_[images_.length - 1].url
-            } else if (images_.count > 0) {
-                return images_.get(images_.count - 1).url
-            } else {
-                return ""
-            }
-        } else {
-            return ""
-        }
-    }
+    readonly property string _image: SpotifyUtils.chooseImage(images_, Theme.itemSizeMedium)
     readonly property bool _fallback: !_image || image.status === Image.Error
     readonly property var _imageSize: _fallback ? undefined : Theme.itemSizeMedium
 
@@ -73,6 +62,7 @@ ListItem {
             opacity: image.status === Image.Ready ? 1 : 0
             visible: opacity > 0
             source: _fallback ? fallbackIcon : _image
+            fillMode: Image.PreserveAspectCrop
 
             layer {
                 enabled: root.highlighted

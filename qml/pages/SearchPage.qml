@@ -70,18 +70,39 @@ Page {
             fallbackIcon: "image://theme/icon-m-media-albums"
 
             onClicked: {
-                if (type === "artist") {
-                    pageStack.push(Qt.resolvedUrl("ArtistPage.qml"), {
-                        "artistId": id,
-                        "name":  name
-                    })
-                } else if (type === "album") {
-                    pageStack.push(Qt.resolvedUrl("AlbumPage.qml"), {
-                        "albumId": id,
-                        "album": listView.model.get(index)
-                    })
-                } else {
-                    console.log("No action for " + type)
+                switch (type) {
+                    case "artist":
+                        pageStack.push(Qt.resolvedUrl("ArtistPage.qml"), {
+                            "artistId": id,
+                            "artist": listView.model.get(index)
+                        })
+                        break;
+
+                    case "album":
+                        pageStack.push(Qt.resolvedUrl("AlbumPage.qml"), {
+                            "albumId": id,
+                            "album": listView.model.get(index)
+                        })
+                        break;
+
+                    case "track":
+                        pageStack.push(Qt.resolvedUrl("AlbumPage.qml"), {
+                            "albumId": album.id,
+                            "album": album,
+                            "highlightTrack": id,
+                        })
+                        break;
+
+                    case "playlist":
+                        pageStack.push(Qt.resolvedUrl("PlaylistPage.qml"), {
+                            "playlistId": id,
+                            "playlist": listView.model.get(index)
+                        })
+                        break;
+                        
+                    default:
+                        console.error("Unsupported result type " + type)
+                        break;
                 }
 
                 keyValueStorage.pushEvent("searchResult", uri)

@@ -2,6 +2,7 @@ import QtQuick 2.0
 import Sailfish.Silica 1.0
 import "../components"
 import "../components/api"
+import "../spotifyUtils.js" as SpotifyUtils
 
 Page {
     id: page
@@ -21,20 +22,7 @@ Page {
         header: Column {
             width: page.width
 
-            readonly property string _imageUrl: {
-                var images = album.images
-                if (images) {
-                    if (images.length > 0) {
-                        return images[0].url
-                    } else if (images.count > 0) {
-                        return images.get(0).url
-                    } else {
-                        return ""
-                    }
-                } else {
-                    return ""
-                }
-            }
+            readonly property string _imageUrl: SpotifyUtils.chooseImage(album.images, width)
 
             Image {
                 source: _imageUrl
@@ -42,6 +30,7 @@ Page {
                 width: page.width
                 height: page.width
                 asynchronous: true
+                visible: !!_imageUrl
             }
 
             PageHeader {

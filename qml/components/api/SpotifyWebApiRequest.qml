@@ -100,4 +100,10 @@ Object {
             "data": data
         })
     }
+
+    // actions
+
+    function abort() {
+        request.abort()
+    }
 }
