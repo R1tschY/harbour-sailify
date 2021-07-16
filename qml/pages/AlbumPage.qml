@@ -89,11 +89,7 @@ Page {
         Component {
             id: sectionHeading
 
-            Label {
-                id: sectionLabel
-
-                x: Theme.horizontalPageMargin
-                font.bold: true
+            SectionHeader {
                 text: qsTr("Disc %1").arg(section)
             }
         }
