@@ -439,10 +439,14 @@ impl LibrespotPrivate {
     }
 
     pub fn access_token_expires_in(&self) -> i32 {
-        self.access_token
-            .as_ref()
-            .map(|t| Instant::now().duration_since(t.1).as_secs() as i32)
-            .unwrap_or(-1)
+        if let Some(access_token) = &self.access_token {
+            access_token
+                .1
+                .saturating_duration_since(Instant::now())
+                .as_secs() as i32
+        } else {
+            0
+        }
     }
 
     fn set_access_token(&mut self, value: Result<Token, String>) {

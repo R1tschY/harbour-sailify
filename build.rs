@@ -81,7 +81,7 @@ fn main() {
                 .read("accessToken")
                 .notify("accessTokenChanged"),
         )
-        .property(QObjectProp::new::<QString>("accessTokenExpiresIn").read("accessTokenExpiresIn"))
+        .property(QObjectProp::new::<i32>("accessTokenExpiresIn").read("accessTokenExpiresIn"))
         .property(
             QObjectProp::new::<QString>("deviceId")
                 .read("deviceId")
