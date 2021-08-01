@@ -242,11 +242,6 @@ impl LibrespotPrivate {
 
     // #[slot]
     pub fn logout(&mut self) {
-        if !self.is_active() {
-            warn!("Logout not possible: librespot is shutdown");
-            return;
-        }
-
         info!("Logging out ...");
 
         self.shutdown();
