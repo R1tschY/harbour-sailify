@@ -11,7 +11,7 @@ DockedPanel {
         PropertyAnimation { }
     }
 
-    open: !Qt.inputMethod.visible && !!pageStack.currentPage
+    open: !Qt.inputMethod.visible && librespot.playbackStatus !== "stopped"
 
     property int progressBarHeight: Theme.paddingSmall
 
