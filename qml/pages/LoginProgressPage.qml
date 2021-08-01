@@ -50,7 +50,11 @@ Page {
 
     function onError(error) {
         pageStack.completeAnimation()
-        pageStack.replace(Qt.resolvedUrl("LoginErrorPage.qml"), {}, PageStackAction.Immediate)
+        if (librespot.errorKind === "missing-credentials") {
+            pageStack.replace(Qt.resolvedUrl("LoginPage.qml"), {}, PageStackAction.Immediate)
+        } else {
+            pageStack.replace(Qt.resolvedUrl("LoginErrorPage.qml"), {}, PageStackAction.Immediate)
+        }
     }
 
     PageBusyIndicator {

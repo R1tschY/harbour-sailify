@@ -24,3 +24,14 @@ quick_error! {
 }
 
 pub type LibrespotResult<T> = Result<T, LibrespotError>;
+
+impl LibrespotError {
+    pub fn kind(&self) -> &'static str {
+        match self {
+            LibrespotError::MissingCredentials => "missing-credentials",
+            LibrespotError::IllegalConfig(_) => "illegal-config",
+            LibrespotError::Io(_) => "io",
+            LibrespotError::Connection(_) => "connection",
+        }
+    }
+}

@@ -56,8 +56,7 @@ pub struct LibrespotPrivate {
 
     access_token: Option<(String, Instant)>,
 
-    error_kind: Option<String>,
-    error_string: Option<String>,
+    error: Option<LibrespotError>,
 
     media_status: MediaStatus,
     connection: ConnectionStatus,
@@ -96,8 +95,7 @@ impl LibrespotPrivate {
 
             access_token: None,
 
-            error_kind: None,
-            error_string: None,
+            error: None,
             media_status: MediaStatus::NoMedia,
             connection: ConnectionStatus::Disconnected,
             track: None,
@@ -306,21 +304,19 @@ impl LibrespotPrivate {
     // error
 
     pub fn error_kind(&self) -> QString {
-        self.error_kind.to_qstring()
+        self.error.as_ref().map(|err| err.kind()).to_qstring()
     }
 
     pub fn error_string(&self) -> QString {
-        self.error_string.to_qstring()
+        self.error
+            .as_ref()
+            .map(|err| format!("{}", &err))
+            .to_qstring()
     }
 
     fn set_error(&mut self, err: LibrespotError) {
-        let message = format!("{}", &err);
-        let kind = format!("{:?}", &err);
-
-        error!("Librespot error: {}", &message);
-        self.error_kind = Some(kind);
-        self.error_string = Some(message);
-
+        error!("Librespot error: {}", err);
+        self.error = Some(err);
         unsafe { &mut *self.qobject }.error_occurred();
     }
 
