@@ -4,11 +4,12 @@ import Sailfish.Silica 1.0
 Page {
     id: page
     allowedOrientations: Orientation.All
+    objectName: "LoginPage"
 
     function login(user, pass) {
         librespot.username = usernameField.text
         librespot.password = passwordField.text
-        pageStack.push(Qt.resolvedUrl("LoginProgressPage.qml"))
+        pageStack.push(Qt.resolvedUrl("LoginProgressPage.qml"), {}, PageStackAction.Immediate)
     }
 
     Connections {
@@ -36,6 +37,7 @@ Page {
 
             Image {
                 id: logo
+                // TODO: image as local resource
                 source: "https://storage.googleapis.com/pr-newsroom-wp/1/2018/11/Spotify_Logo_RGB_Green.png"
                 y: Theme.paddingMedium
                 height: Theme.itemSizeExtraLarge

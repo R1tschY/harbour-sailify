@@ -50,28 +50,10 @@ Page {
 
     function onError(error) {
         pageStack.completeAnimation()
-
-        if (pageStack.depth > 1) {
-            pageStack.replace(Qt.resolvedUrl("ErrorPage.qml"), {
-                "header": qsTr("Login Error"),
-                "text": error
-            }, PageStackAction.Immediate)
-        } else {
-            var pages = [{
-                "page": Qt.resolvedUrl("LoginPage.qml"),
-            }]
-
-            if (librespot.errorKind !== "MissingCredentials") {
-                pages.push({
-                    "page": Qt.resolvedUrl("ErrorPage.qml"),
-                    "properties": {
-                        "header": qsTr("Login Error"),
-                        "text": error
-                    }
-                })
-            }
-            pageStack.replaceAbove(null, pages, {}, PageStackAction.Immediate)
-        }
+        pageStack.replace(Qt.resolvedUrl("LoginErrorPage.qml"), {
+            "header": qsTr("Login Error"),
+            "text": error
+        }, PageStackAction.Immediate)
     }
 
     PageBusyIndicator {

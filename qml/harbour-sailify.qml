@@ -11,7 +11,7 @@ ApplicationWindow
     bottomMargin: playingPanel.parent === contentItem
                   ? 0 : playingPanel.visibleSize
 
-    property bool darkMode: Theme.colorScheme === Theme.LightOnDark
+    readonly property bool darkMode: Theme.colorScheme === Theme.LightOnDark
 
     initialPage: Component { LoginProgressPage { } }
     cover: Qt.resolvedUrl("cover/CoverPage.qml")
@@ -39,6 +39,13 @@ ApplicationWindow
 
     NetworkMonitor {
         id: networkMonitor
+    }
+
+    // Commands
+
+    function logout() {
+        librespot.logout()
+        pageStack.replaceAbove(null, Qt.resolvedUrl("LoginPage.qml"))
     }
 }
 

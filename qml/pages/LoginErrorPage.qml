@@ -19,7 +19,7 @@ Page {
 
             PageHeader {
                 id: header
-                title: qsTr("Error")
+                title: qsTr("Login Error")
             }
 
             Label {
@@ -34,6 +34,20 @@ Page {
 
                 color: Theme.secondaryHighlightColor
                 wrapMode: Text.WordWrap
+            }
+
+            Button {
+               text: qsTr("Retry")
+               onClicked: pageStack.replace(
+                    Qt.resolvedUrl("LoginProgressPage.qml"), {}, PageStackAction.Immediate)
+            }
+        }
+
+        PullDownMenu {
+            MenuItem {
+                text: qsTr("Logout")
+                onClicked: app.logout()
+                visible: pageStack.previousPage(page).objectName !== "LoginPage"
             }
         }
 

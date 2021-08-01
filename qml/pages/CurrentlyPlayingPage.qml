@@ -104,10 +104,7 @@ Page {
         PullDownMenu {
             MenuItem {
                 text: qsTr("Logout")
-                onClicked: {
-                    librespot.logout()
-                    pageStack.replaceAbove(null, Qt.resolvedUrl("LoginPage.qml"))
-                }
+                onClicked: app.logout()
             }
         }
     }

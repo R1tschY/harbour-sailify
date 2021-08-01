@@ -27,4 +27,7 @@ DISTFILES += qml/*.qml \
     qml/pages/SavedTracksPage.qml \
     qml/pages/SearchPage.qml \
     qml/pages/TopTracksPage.qml \
+    qml/pages/LoginPage.qml \
+    qml/pages/LoginProgressPage.qml \
+    qml/pages/LoginErrorPage.qml \
     qml/spotifyUtils.js
