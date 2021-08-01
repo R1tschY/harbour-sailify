@@ -6,8 +6,11 @@ import ".."
 Object {
     id: root
 
-    property string accessToken: librespot.accessToken
-    property alias busy: request.busy
+    readonly property string accessToken: librespot.accessToken
+    readonly property bool busy: _waitForAccessToken || request.busy
+
+    property var _prepared: null
+    property bool _waitForAccessToken: false
 
     Notification {
         id: notification
@@ -37,6 +40,17 @@ Object {
         }
 
         onError: _sendError(errorType, errorMessage)
+    }
+
+    Connections {
+        target: librespot
+        onAccessTokenChanged: {
+            if (!_waitForAccessToken || _prepared === null) {
+                return
+            }
+
+            _executePrepared()
+        }
     }
 
     // signals
@@ -84,26 +98,50 @@ Object {
     }
 
     function executeApi(method, path, params, data, responseType) {
+        _reset()
+
         if (!accessToken) {
-            console.error("Request without token not possible")
+            _sendError("Request without access token not possible")
             return
         }
 
-        request.execute({
+        _prepared = {
             "method": method,
             "url": "https://api.spotify.com/v1/" + path,
-            "headers": {
-                "Authorization": "Bearer " + accessToken
-            },
+            "headers": {},
             "responseType": responseType || "json",
             "params": params,
             "data": data
-        })
+        }
+        if (librespot.accessTokenExpiresIn < 120) {
+            _waitForAccessToken = true
+            console.info("Refreshing access token for request")
+            librespot.refreshAccessToken()
+        } else {
+            _executePrepared()
+        }
+    }
+
+    function _executePrepared() {
+        if (!accessToken || librespot.accessTokenExpiresIn === 0) {
+            _sendError("Got no valid access token")
+            return
+        }
+
+        _waitForAccessToken = false
+        _prepared["headers"]["Authorization"] = "Bearer " + accessToken
+        request.execute(_prepared)
+    }
+
+    function _reset() {
+        _waitForAccessToken = false
+        _prepared = null
     }
 
     // actions
 
     function abort() {
+        _reset()
         request.abort()
     }
 }

@@ -36,7 +36,6 @@ SilicaListView {
 
     model: SpotifyWebApiListModel {
         id: listModel
-        accessToken: librespot.accessToken
     }
 
     function ensureContent() {
