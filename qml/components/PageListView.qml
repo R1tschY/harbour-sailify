@@ -9,7 +9,6 @@ SilicaListView {
     property alias dataDelegate: listModel.dataDelegate
 
     property bool _complete: false
-    property int _overflowHeight: contentHeight - height - headerItem.height
 
     id: root
     anchors.fill: parent
@@ -41,7 +40,7 @@ SilicaListView {
     function ensureContent() {
         if (_complete
                 && !listModel.completlyFetched
-                && _overflowHeight - contentY < 1000) {
+                && contentHeight - height - headerItem.height - contentY < 1000) {
             listModel.fetchNext()
         }
     }
