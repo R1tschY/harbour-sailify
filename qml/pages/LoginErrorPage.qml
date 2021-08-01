@@ -4,9 +4,6 @@ import Sailfish.Silica 1.0
 Page {
     id: page
 
-    property alias header: header.title
-    property alias text: label.text
-
     SilicaFlickable {
         id: flickable
 
@@ -16,6 +13,7 @@ Page {
             id: column
 
             width: page.width
+            spacing: Theme.paddingLarge
 
             PageHeader {
                 id: header
@@ -30,7 +28,7 @@ Page {
                     left: parent.left
                     leftMargin: Theme.horizontalPageMargin
                 }
-                text: librespot.errorString
+                text: librespot.errorString || qsTr("Unknown error")
 
                 color: Theme.secondaryHighlightColor
                 wrapMode: Text.WordWrap
@@ -38,6 +36,9 @@ Page {
 
             Button {
                text: qsTr("Retry")
+               anchors {
+                   horizontalCenter: parent.horizontalCenter
+               }
                onClicked: pageStack.replace(
                     Qt.resolvedUrl("LoginProgressPage.qml"), {}, PageStackAction.Immediate)
             }
@@ -47,7 +48,8 @@ Page {
             MenuItem {
                 text: qsTr("Logout")
                 onClicked: app.logout()
-                visible: pageStack.previousPage(page).objectName !== "LoginPage"
+                visible: pageStack.depth === 1
+                         || pageStack.previousPage(page).objectName !== "LoginPage"
             }
         }
 

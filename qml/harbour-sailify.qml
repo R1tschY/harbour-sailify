@@ -45,7 +45,7 @@ ApplicationWindow
 
     function logout() {
         librespot.logout()
-        pageStack.replaceAbove(null, Qt.resolvedUrl("LoginPage.qml"))
+        pageStack.replaceAbove(null, Qt.resolvedUrl("pages/LoginPage.qml"))
     }
 }
 

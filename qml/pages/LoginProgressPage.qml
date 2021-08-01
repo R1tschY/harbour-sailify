@@ -31,7 +31,7 @@ Page {
         onTriggered: {
             switch (librespot.connectionStatus) {
             case 0: // disconnected
-                onError(librespot.error || "Unknown")
+                onError()
                 break;
             case 1: // connecting
                 progressLabel.text = qsTr("Logging in …")
@@ -50,10 +50,7 @@ Page {
 
     function onError(error) {
         pageStack.completeAnimation()
-        pageStack.replace(Qt.resolvedUrl("LoginErrorPage.qml"), {
-            "header": qsTr("Login Error"),
-            "text": error
-        }, PageStackAction.Immediate)
+        pageStack.replace(Qt.resolvedUrl("LoginErrorPage.qml"), {}, PageStackAction.Immediate)
     }
 
     PageBusyIndicator {
