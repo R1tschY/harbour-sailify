@@ -49,7 +49,9 @@ pub enum LibrespotEvent {
     TokenChanged {
         token: Result<Token, String>,
     },
-    Panic,
+    Panic {
+        message: String,
+    },
 }
 
 impl LibrespotEvent {

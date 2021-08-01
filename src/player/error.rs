@@ -20,6 +20,10 @@ quick_error! {
         Connection(msg: String) {
             display("Connection error: {}", msg)
         }
+
+        Panic(msg: String) {
+            display("Internal error: {}", msg)
+        }
     }
 }
 
@@ -32,6 +36,7 @@ impl LibrespotError {
             LibrespotError::IllegalConfig(_) => "illegal-config",
             LibrespotError::Io(_) => "io",
             LibrespotError::Connection(_) => "connection",
+            LibrespotError::Panic(_) => "panic",
         }
     }
 }

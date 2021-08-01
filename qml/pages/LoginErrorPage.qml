@@ -49,7 +49,7 @@ Page {
                 text: qsTr("Logout")
                 onClicked: app.logout()
                 visible: pageStack.depth === 1
-                         || pageStack.previousPage(page).objectName !== "LoginPage"
+                         || pageStack.previousPage().objectName !== "LoginPage"
             }
         }
 

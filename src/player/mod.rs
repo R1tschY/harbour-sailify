@@ -240,8 +240,16 @@ impl LibrespotThread {
                     info!("CORE END");
                 });
                 if let Err(err) = result {
-                    info!("CORE CRASH");
-                    gateway.send(LibrespotEvent::Panic);
+                    let message = if let Some(s) = err.downcast_ref::<&str>() {
+                        s.to_string()
+                    } else if let Some(s) = err.downcast_ref::<String>() {
+                        s.clone()
+                    } else {
+                        "Unknown internal error".to_string()
+                    };
+
+                    info!("CORE CRASH: {}", message);
+                    gateway.send(LibrespotEvent::Panic { message });
                     panic::resume_unwind(err);
                 }
             })

@@ -7,6 +7,7 @@ Page {
     Component.onCompleted: {
         switch (librespot.connectionStatus) {
         case 0: // disconnected
+        case 100: // panic
             librespot.login();
             break;
         case 1: // connecting
@@ -27,10 +28,15 @@ Page {
 
     Timer {
         id: changeTimer
-        interval: 500
+
+        interval: 50
+        repeat: false
+        running: false
+
         onTriggered: {
             switch (librespot.connectionStatus) {
             case 0: // disconnected
+            case 100:
                 onError()
                 break;
             case 1: // connecting

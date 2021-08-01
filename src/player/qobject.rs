@@ -206,7 +206,8 @@ impl LibrespotPrivate {
                 self.set_position(0, PlayerState::Stopped);
             }
             LibrespotEvent::TokenChanged { token } => self.set_access_token(token),
-            LibrespotEvent::Panic => {
+            LibrespotEvent::Panic { message } => {
+                self.set_error(LibrespotError::Panic(message));
                 self.set_connection_status(ConnectionStatus::Crashed);
                 self.set_media_status(MediaStatus::NoMedia);
                 self.set_position(0, PlayerState::Stopped);
