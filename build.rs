@@ -135,7 +135,7 @@ fn main() {
                 .ret::<i32>(),
         )
         .signal(QObjectSignal::new("accessTokenChanged"))
-        .method(QObjectMethod::new("refreshAccessToken"))
+        .slot(QObjectMethod::new("refreshAccessToken"))
         // device id
         .method(QObjectMethod::new("deviceId").const_().ret::<QString>())
         // device name
