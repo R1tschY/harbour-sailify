@@ -125,9 +125,11 @@ QtObject {
                 data: resData,
                 status: req.status,
                 statusText: req.statusText,
-                headers: req.getAllResponseHeaders(),
                 config: config,
-                request: req
+                request: req,
+
+                get headers() { return _parseHeaders(req.getAllResponseHeaders()) },
+                getHeader: function(name) { return req.getResponseHeader(name) }
             }
             request.status = req.status
             request.statusText = req.statusText
@@ -196,5 +198,27 @@ QtObject {
         request.errorType = ""
         request.success(response)
         request.finished(response)
+    }
+
+    function _parseHeaders(headers) {
+        var result = {}
+        var lines = headers.split("\n")
+        var key
+        var value
+        var line
+        var split
+
+        for (var i = 0; i < lines.length; i++) {
+            line = lines[i]
+            split = line.indexOf(":")
+            key = line.substr(0, split).trim()
+            value = line.substr(split + 1).trim()
+
+            if (key) {
+                result[key] = result[key] ? result[key] + ", " + value : value
+            }
+        }
+
+        return result
     }
 }

@@ -22,12 +22,14 @@ QtObject {
     // Key Value
 
     function get(key) {
+        var res
         _db.transaction(function (tx) {
             var results = tx.executeSql('SELECT value FROM kv WHERE key = ?', [key])
             if (results.rows.length > 0) {
-                return JSON.parse(results.rows.item(0))
+                res = JSON.parse(results.rows.item(0))
             }
         })
+        return res
     }
 
     function put(key, value) {
@@ -53,6 +55,7 @@ QtObject {
     // Events
 
     function getEvents(type, limit) {
+        var res = []
         _db.transaction(function (tx) {
             var results
             if (limit) {
@@ -61,13 +64,12 @@ QtObject {
                 results = tx.executeSql('SELECT value FROM events WHERE key = ? ORDER BY timestamp LIMIT ?', [type, limit])
             }
 
-            var res = []
             var length = results.rows.length
             for (var i = 0; i < length; i++) {
                 res.push(JSON.parse(results.rows.item(0)))
             }
-            return res
         })
+        return res
     }
 
     function pushEvent(type, value) {

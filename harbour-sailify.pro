@@ -8,6 +8,7 @@ DISTFILES += qml/*.qml \
     qml/components/AlbumTrackListItem.qml \
     qml/components/CurrentlyPlayingMetadata.qml \
     qml/components/CurrentlyPlayingPanel.qml \
+    qml/components/HttpCache.qml \
     qml/components/IconListItem.qml \
     qml/components/KeyValueStorage.qml \
     qml/components/Mpris2Adapter.qml \

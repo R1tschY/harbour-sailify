@@ -22,8 +22,7 @@ ListModel {
     property var request: SpotifyWebApiRequest {
         id: request
         onSuccess: {
-            var data = response.data
-
+            var data = responseData
             if (dataDelegate) {
                 data = dataDelegate(data)
             }

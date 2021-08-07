@@ -31,8 +31,12 @@ ApplicationWindow
 
     KeyValueStorage {
         id: keyValueStorage
-
         dataBaseId: "configuration"
+    }
+
+    HttpCache {
+        id: spotifyApiCache
+        dataBaseId: "spotifyApiCache"
     }
 
     Mpris2Adapter { }

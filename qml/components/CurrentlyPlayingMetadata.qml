@@ -8,7 +8,7 @@ Object {
         id: request
 
         onSuccess: {
-            var data = response.data
+            var data = responseData
             uri = data.uri || ""
             name = data.name
             trackNumber = data.track_number

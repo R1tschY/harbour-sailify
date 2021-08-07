@@ -30,7 +30,19 @@ Object {
 
         onSuccess: {
             if (response.status >= 200 && response.status < 300) {
-                root.success(response)
+                var match = /max-age=(\d+)/.exec(response.getHeader("cache-control"))
+                var cacheControlMaxAge = match ? match[1] : -1
+                var etag = response.getHeader("etag")
+
+                if (cacheControlMaxAge > 0 && response.config.method === "GET") {
+                    var expires = Date.now() + cacheControlMaxAge
+                    console.log("CACHE PUT", response.config.url, etag, cacheControlMaxAge)
+                    spotifyApiCache.put(response.config.url, etag, expires, response.data)
+                } else {
+                    console.log("CACHE IGNORE", response.config.url, response.getHeader("cache-control"))
+                }
+
+                root.success(response.data)
             } else {
                 var error = response.data.error || {}
                 _sendError(
@@ -57,7 +69,7 @@ Object {
 
     signal finished(var response)
     signal error(string errorType, string errorMessage)
-    signal success(var response)
+    signal success(var responseData)
 
     // calls
 
@@ -105,12 +117,29 @@ Object {
             return
         }
 
+        // check cache
+        var url = "https://api.spotify.com/v1/" + path
+        if (params) {
+            url += '?' + request._paramsToQueryString(params)
+        }
+
+        var etag
+        if (method === "GET") {
+            var cached = spotifyApiCache.get(url)
+            if (cached) {
+                console.info("CACHE HIT", url)
+                etag = cached.etag
+                root.finished({data: cached.data})
+                root.success(cached.data)
+                return;
+            }
+        }
+
         _prepared = {
             "method": method,
-            "url": "https://api.spotify.com/v1/" + path,
+            "url": url,
             "headers": {},
             "responseType": responseType || "json",
-            "params": params,
             "data": data
         }
         if (librespot.accessTokenExpiresIn < 120) {
