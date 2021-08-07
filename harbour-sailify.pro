@@ -27,6 +27,8 @@ DISTFILES += qml/*.qml \
     qml/pages/PlaylistsPage.qml \
     qml/pages/SavedTracksPage.qml \
     qml/pages/SearchPage.qml \
+    qml/pages/SettingsPage.qml \
+    qml/pages/AboutPage.qml \
     qml/pages/TopTracksPage.qml \
     qml/pages/LoginPage.qml \
     qml/pages/LoginProgressPage.qml \

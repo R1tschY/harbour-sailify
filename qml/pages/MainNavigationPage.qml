@@ -83,6 +83,12 @@ Page {
                 source: "image://theme/icon-m-acknowledge"
                 page: Qt.resolvedUrl("CurrentlyPlayingPage.qml")
             }
+
+            NavigationItem {
+                title: qsTr("Settings")
+                source: "image://theme/icon-m-setting"
+                page: Qt.resolvedUrl("SettingsPage.qml")
+            }
         }
 
         VerticalScrollDecorator {}
