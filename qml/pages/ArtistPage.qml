@@ -4,6 +4,8 @@ import "../components"
 import "../spotifyUtils.js" as SpotifyUtils
 
 Page {
+    id: page
+
     property string artistId
     property var artist
 
