@@ -35,7 +35,7 @@ Object {
                 var etag = response.getHeader("etag")
 
                 if (cacheControlMaxAge > 0 && response.config.method === "GET") {
-                    var expires = Date.now() + cacheControlMaxAge
+                    var expires = Date.now() + cacheControlMaxAge * 1000
                     console.log("CACHE PUT", response.config.url, etag, cacheControlMaxAge)
                     spotifyApiCache.put(response.config.url, etag, expires, response.data)
                 } else {
