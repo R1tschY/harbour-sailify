@@ -48,15 +48,24 @@ export $(egrep -v '^#' %{_sourcedir}/../.env | xargs)
 # Rust cross-compile environment
 # See https://github.com/sailfishos/gecko-dev/blob/master/rpm/xulrunner-qt5.spec
 
-%ifarch %arm32
-%define SB2_TARGET armv7-unknown-linux-gnueabihf
-%endif
-%ifarch %arm64
-%define SB2_TARGET aarch64-unknown-linux-gnu
-%endif
-%ifarch %ix86
-%define SB2_TARGET i686-unknown-linux-gnu
-%endif
+case "$DEB_BUILD_ARCH_CPU" in
+    armv7hl)
+        export SB2_TARGET=armv7-unknown-linux-gnueabihf
+        ;;
+
+    aarch64)
+        export SB2_TARGET=aarch64-unknown-linux-gnu
+        ;;
+
+    i686)
+        export SB2_TARGET=i686-unknown-linux-gnu
+        ;;
+
+    *)
+        echo "Unknown arch $DEB_BUILD_ARCH_CPU"
+        exit 1
+        ;;
+esac
 
 export LIBDIR='%{_libdir}'
 
@@ -65,24 +74,24 @@ export LIBDIR='%{_libdir}'
 # to "whatever rust was built as" but in SB2 rust is accelerated and
 # would produce x86 so this is how it knows differently. Not needed
 # for native x86 builds
-export SB2_RUST_TARGET_TRIPLE=%SB2_TARGET
-export RUST_HOST_TARGET=%SB2_TARGET
+export SB2_RUST_TARGET_TRIPLE=$SB2_TARGET
+export RUST_HOST_TARGET=$SB2_TARGET
 
-export RUST_TARGET=%SB2_TARGET
-export TARGET=%SB2_TARGET
-export HOST=%SB2_TARGET
-export SB2_TARGET=%SB2_TARGET
+export RUST_TARGET=$SB2_TARGET
+export TARGET=$SB2_TARGET
+export HOST=$SB2_TARGET
+export SB2_TARGET=$SB2_TARGET
 
-%ifarch %arm32 %arm64
-export CROSS_COMPILE=%SB2_TARGET
+if [ "$DEB_BUILD_ARCH_CPU" == armv7hl ] || [ "$DEB_BUILD_ARCH_CPU" == aarch64 ]; then
+    export CROSS_COMPILE=$SB2_TARGET
 
-# This avoids a malloc hang in sb2 gated calls to execvp/dup2/chdir
-# during fork/exec. It has no effect outside sb2 so doesn't hurt
-# native builds.
-export SB2_RUST_EXECVP_SHIM="/usr/bin/env LD_PRELOAD=/usr/lib/libsb2/libsb2.so.1 /usr/bin/env"
-export SB2_RUST_USE_REAL_EXECVP=Yes
-export SB2_RUST_USE_REAL_FN=Yes
-%endif
+    # This avoids a malloc hang in sb2 gated calls to execvp/dup2/chdir
+    # during fork/exec. It has no effect outside sb2 so doesn't hurt
+    # native builds.
+    export SB2_RUST_EXECVP_SHIM="/usr/bin/env LD_PRELOAD=/usr/lib/libsb2/libsb2.so.1 /usr/bin/env"
+    export SB2_RUST_USE_REAL_EXECVP=Yes
+    export SB2_RUST_USE_REAL_FN=Yes
+fi
 
 export CC=gcc
 export CXX=g++
@@ -90,7 +99,7 @@ export AR="gcc-ar"
 export NM="gcc-nm"
 export RANLIB="gcc-ranlib"
 
-export CARGO_BUILD_TARGET=%SB2_TARGET
+export CARGO_BUILD_TARGET=$SB2_TARGET
 
 #
 # Cargo
@@ -98,19 +107,19 @@ export CARGO_BUILD_TARGET=%SB2_TARGET
 export CARGO_PROFILE_RELEASE_LTO=fat
 export RUSTFLAGS="-Clink-arg=-Wl,-z,relro,-z,now -Ccodegen-units=1 %{?rustflags}"
 export CARGO_INCREMENTAL=0
-cargo build --release --target-dir=%BUILD_DIR --manifest-path %{_sourcedir}/../Cargo.toml
+cargo build --release -j1 --target-dir=%BUILD_DIR --manifest-path %{_sourcedir}/../Cargo.toml
 
 #
 # CMake
-CMAKE_BUILD_DIR="%{BUILD_DIR}/%{SB2_TARGET}/release"
+CMAKE_BUILD_DIR="%{BUILD_DIR}/${SB2_TARGET}/release"
 SOURCE_DIR=`readlink -f %{_sourcedir}/..`
 
 # Ninja seems not to work for i686
-%ifarch %ix86
-GENERATOR="Unix Makefiles"
-%else
-GENERATOR="Ninja"
-%endif
+if [ "$DEB_BUILD_ARCH_CPU" == i686 ]; then
+    GENERATOR="Unix Makefiles"
+else
+    GENERATOR="Ninja"
+fi
 
 if [ "$SAILFISH_SDK_FRONTEND" == "qtcreator" ] ; then
   CMAKE_BUILD_TYPE="Debug"
@@ -118,16 +127,26 @@ else
   CMAKE_BUILD_TYPE="RelWithDebInfo"
 fi
 
-cmake \
-  -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE \
-  -DBUILD_SHARED_LIBS=OFF \
-  -DCMAKE_INSTALL_PREFIX=/usr \
-  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-  -DSAILFISHOS=ON \
-  -G "$GENERATOR" \
-  -S "$SOURCE_DIR" \
-  -B "$CMAKE_BUILD_DIR"
-cmake --build "$CMAKE_BUILD_DIR" -- %{?_smp_mflags}
+if [ "$SAILFISH_SDK_FRONTEND" == "qtcreator" ] ; then
+    cmake \
+      -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE \
+      -DBUILD_SHARED_LIBS=OFF \
+      -DCMAKE_INSTALL_PREFIX=/usr \
+      -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+      -DSAILFISHOS=ON
+    cmake --build "$PWD" -- %{?_smp_mflags}
+else
+    cmake \
+      -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE \
+      -DBUILD_SHARED_LIBS=OFF \
+      -DCMAKE_INSTALL_PREFIX=/usr \
+      -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+      -DSAILFISHOS=ON \
+      -G "$GENERATOR" \
+      -S "$SOURCE_DIR" \
+      -B "$CMAKE_BUILD_DIR"
+    cmake --build "$CMAKE_BUILD_DIR" -- %{?_smp_mflags}
+fi
 
 # - INSTALL --------------------------------------------------------------------
 %install
