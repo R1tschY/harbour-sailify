@@ -1,7 +1,7 @@
 use std::fs;
 use std::io;
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::thread::JoinHandle;
 use std::{env, panic};
@@ -22,15 +22,16 @@ use uuid::Uuid;
 
 use crate::player::controller::{ControlMessage, LibrespotConfig, LibrespotController};
 use crate::player::error::{LibrespotError, LibrespotResult};
-use crate::player::qtgateway::{LibrespotEvent, LibrespotGateway};
+use crate::player::qtgateway::{LibrespotEvent, LibrespotEventListener};
 use crate::utils::xdg;
 
+mod bindings;
 pub mod controller;
 pub mod error;
 pub mod qobject;
 pub mod qtgateway;
 
-pub const CLIENT_ID: &str = env!("SAILIFY_CLIENT_ID");
+pub const CLIENT_ID: &str = env!("HOME");
 
 pub const SCOPES: &str = "user-read-private,\
 playlist-read-private,\
@@ -78,7 +79,7 @@ impl Options {
         let hw_name = OsRelease::new_from("/etc/hw-release")
             .ok()
             .map(|hw| hw.name)
-            .unwrap_or("Sailfish OS".to_string());
+            .unwrap_or_else(|| "Sailfish OS".to_string());
         let cache_dir = xdg::config_home().join("harbour-sailify").join("librespot");
 
         let device_id_path = cache_dir.join("device_id");
@@ -212,7 +213,10 @@ impl LibrespotThread {
         };
     }
 
-    pub fn run(gateway: LibrespotGateway, options: Options) -> LibrespotResult<Self> {
+    pub fn run(
+        listener: Arc<dyn LibrespotEventListener>,
+        options: Options,
+    ) -> LibrespotResult<Self> {
         let setup = setup(options)?;
 
         let (control_tx, control_rx) = unbounded();
@@ -222,7 +226,7 @@ impl LibrespotThread {
         let handle = thread::Builder::new()
             .name("librespot".to_string())
             .spawn(move || {
-                let gateway_clone = gateway.clone();
+                let listener_clone = listener.clone();
                 let result = panic::catch_unwind(move || {
                     info!("CORE START");
                     let mut core = Core::new().unwrap();
@@ -233,7 +237,7 @@ impl LibrespotThread {
                         core.handle(),
                         control_tx,
                         control_rx,
-                        gateway_clone,
+                        listener_clone,
                         setup,
                     );
                     let _ = core.run(Box::pin(controller_future.unit_error()).compat());
@@ -249,7 +253,7 @@ impl LibrespotThread {
                     };
 
                     info!("CORE CRASH: {}", message);
-                    gateway.send(LibrespotEvent::Panic { message });
+                    listener.notify(LibrespotEvent::Panic { message });
                     panic::resume_unwind(err);
                 }
             })

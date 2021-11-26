@@ -14,14 +14,21 @@ BuildRequires:  pkgconfig(Qt5Core)
 BuildRequires:  pkgconfig(Qt5Qml)
 BuildRequires:  pkgconfig(Qt5Quick)
 BuildRequires:  pkgconfig(libpulse)
+BuildRequires:  pkgconfig(libpulse-simple)
 BuildRequires:  pkgconfig(openssl)
 BuildRequires:  desktop-file-utils
-BuildRequires:  rust
+BuildRequires:  cmake
+BuildRequires:  ninja
+BuildRequires:  rust >= 1.48
+BuildRequires:  rust-std-static >= 1.48
 BuildRequires:  cargo
+BuildRequires:  cbindgen
 
 
 %description
 A Spotify client for Sailfish OS focused on usability and stability.
+
+%define BUILD_DIR "$PWD"/target
 
 # - PREP -----------------------------------------------------------------------
 %prep
@@ -29,37 +36,105 @@ A Spotify client for Sailfish OS focused on usability and stability.
 
 # - BUILD ----------------------------------------------------------------------
 %build
+mkdir -p "%{BUILD_DIR}"
 
+#
+# App enviroment
+
+export SAILIFY_PACKAGE_VERSION="%{version}-%{release}"
 export $(egrep -v '^#' %{_sourcedir}/../.env | xargs)
-export RUSTFLAGS="-Clink-arg=-Wl,-z,relro,-z,now -Ccodegen-units=1"
-export TMPDIR=%{_sourcedir}/../.tmp
 
-mkdir -p "$TMPDIR"
+#
+# Rust cross-compile environment
+# See https://github.com/sailfishos/gecko-dev/blob/master/rpm/xulrunner-qt5.spec
 
-# release
+%ifarch %arm32
+%define SB2_TARGET armv7-unknown-linux-gnueabihf
+%endif
+%ifarch %arm64
+%define SB2_TARGET aarch64-unknown-linux-gnu
+%endif
+%ifarch %ix86
+%define SB2_TARGET i686-unknown-linux-gnu
+%endif
+
+export LIBDIR='%{_libdir}'
+
+# When cross-compiling under SB2 rust needs to know what arch to emit
+# when nothing is specified on the command line. That usually defaults
+# to "whatever rust was built as" but in SB2 rust is accelerated and
+# would produce x86 so this is how it knows differently. Not needed
+# for native x86 builds
+export SB2_RUST_TARGET_TRIPLE=%SB2_TARGET
+export RUST_HOST_TARGET=%SB2_TARGET
+
+export RUST_TARGET=%SB2_TARGET
+export TARGET=%SB2_TARGET
+export HOST=%SB2_TARGET
+export SB2_TARGET=%SB2_TARGET
+
+%ifarch %arm32 %arm64
+export CROSS_COMPILE=%SB2_TARGET
+
+# This avoids a malloc hang in sb2 gated calls to execvp/dup2/chdir
+# during fork/exec. It has no effect outside sb2 so doesn't hurt
+# native builds.
+export SB2_RUST_EXECVP_SHIM="/usr/bin/env LD_PRELOAD=/usr/lib/libsb2/libsb2.so.1 /usr/bin/env"
+export SB2_RUST_USE_REAL_EXECVP=Yes
+export SB2_RUST_USE_REAL_FN=Yes
+%endif
+
+export CC=gcc
+export CXX=g++
+export AR="gcc-ar"
+export NM="gcc-nm"
+export RANLIB="gcc-ranlib"
+
+export CARGO_BUILD_TARGET=%SB2_TARGET
+
+#
+# Cargo
+
+export CARGO_PROFILE_RELEASE_LTO=fat
+export RUSTFLAGS="-Clink-arg=-Wl,-z,relro,-z,now -Ccodegen-units=1 %{?rustflags}"
 export CARGO_INCREMENTAL=0
-cargo build --release --target-dir=target --locked --manifest-path %{_sourcedir}/../Cargo.toml
+cargo build --release --target-dir=%BUILD_DIR --manifest-path %{_sourcedir}/../Cargo.toml
 
-# debug
-#cargo build --target-dir=target --locked --manifest-path %{_sourcedir}/../Cargo.toml
+#
+# CMake
+CMAKE_BUILD_DIR="%{BUILD_DIR}/%{SB2_TARGET}/release"
+SOURCE_DIR=`readlink -f %{_sourcedir}/..`
 
-touch Makefile
+# Ninja seems not to work for i686
+%ifarch %ix86
+GENERATOR="Unix Makefiles"
+%else
+GENERATOR="Ninja"
+%endif
+
+if [ "$SAILFISH_SDK_FRONTEND" == "qtcreator" ] ; then
+  CMAKE_BUILD_TYPE="Debug"
+else
+  CMAKE_BUILD_TYPE="RelWithDebInfo"
+fi
+
+cmake \
+  -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE \
+  -DBUILD_SHARED_LIBS=OFF \
+  -DCMAKE_INSTALL_PREFIX=/usr \
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+  -DSAILFISHOS=ON \
+  -G "$GENERATOR" \
+  -S "$SOURCE_DIR" \
+  -B "$CMAKE_BUILD_DIR"
+cmake --build "$CMAKE_BUILD_DIR" -- %{?_smp_mflags}
 
 # - INSTALL --------------------------------------------------------------------
 %install
+CMAKE_BUILD_DIR="%{BUILD_DIR}/%{SB2_TARGET}/release"
 
 rm -rf %{buildroot}
-install -d %{buildroot}%{_datadir}/%{name}
-
-install -Dm 755 target/release/%{name} -t %{buildroot}%{_bindir}
-
-for size in 86 108 128 172
-do
-  install -Dm 644 %{_sourcedir}/../res/${size}x${size}/harbour-sailify.png -t %{buildroot}%{_datadir}/icons/hicolor/${size}x${size}/apps
-done
-
-install -Dm 644 %{_sourcedir}/../harbour-sailify.desktop -t %{buildroot}%{_datadir}/applications
-cp -r %{_sourcedir}/../qml %{buildroot}%{_datadir}/%{name}/qml
+DESTDIR=%{buildroot} cmake --build "$CMAKE_BUILD_DIR" --target install
 
 desktop-file-install --delete-original       \
   --dir %{buildroot}%{_datadir}/applications             \

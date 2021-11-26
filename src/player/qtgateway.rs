@@ -1,12 +1,12 @@
+use std::panic::{RefUnwindSafe, UnwindSafe};
 use std::sync::{mpsc, Arc, Mutex};
 
+use crate::player::error::LibrespotError;
 use librespot_core::keymaster::Token;
 use librespot_playback::player::PlayerEvent;
 use log::warn;
-use qt5qml::core::{ConnectionTypeKind, QObject, QObjectRef};
-use qt5qml::{signal, slot, QBox};
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum LibrespotEvent {
     Stopped {
         play_request_id: u64,
@@ -49,6 +49,7 @@ pub enum LibrespotEvent {
     TokenChanged {
         token: Result<Token, String>,
     },
+    Error,
     Panic {
         message: String,
     },
@@ -111,51 +112,6 @@ impl LibrespotEvent {
     }
 }
 
-mod details {
-    include!(concat!(env!("OUT_DIR"), "/qffi_LibrespotGateway.rs"));
-
-    pub struct LibrespotGatewayPrivate;
-
-    impl LibrespotGatewayPrivate {
-        pub fn new(_: *mut LibrespotGateway) -> Self {
-            Self
-        }
-    }
-}
-
-struct LibrespotGatewaySender {
-    qobject: QBox<details::LibrespotGateway>,
-    tx: mpsc::Sender<LibrespotEvent>,
-}
-
-#[derive(Clone)]
-pub struct LibrespotGateway(Arc<Mutex<LibrespotGatewaySender>>);
-
-impl LibrespotGateway {
-    pub fn new(parent: &QObject, tx: mpsc::Sender<LibrespotEvent>) -> Self {
-        let mut qobject = details::LibrespotGateway::new();
-
-        QObject::connect(
-            qobject.as_qobject(),
-            signal!("playerEvent()"),
-            parent,
-            slot!("_onPlayerEvent()"),
-            ConnectionTypeKind::Queued,
-        );
-        qobject.move_to_thread(None);
-
-        Self(Arc::new(Mutex::new(LibrespotGatewaySender { qobject, tx })))
-    }
-
-    pub fn send(&self, evt: LibrespotEvent) {
-        if let Ok(mut locked) = self.0.lock() {
-            if let Err(_) = locked.tx.send(evt) {
-                warn!("Failed to send librespot event to Qt thread: other end is already closed");
-            } else {
-                locked.qobject.player_event();
-            }
-        } else {
-            warn!("Failed to send librespot event to Qt thread: mutex is poisoned");
-        }
-    }
+pub trait LibrespotEventListener: RefUnwindSafe + UnwindSafe + Sync + Send {
+    fn notify(&self, evt: LibrespotEvent);
 }

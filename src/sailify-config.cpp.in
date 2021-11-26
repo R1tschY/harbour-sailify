@@ -1,0 +1,17 @@
+#include <QString>
+
+namespace Sailify {
+
+QString DBUS_SERVICE_NAME =
+        QStringLiteral("de.richardliebscher.sailify");
+
+QString PACKAGE_VERSION =
+        QStringLiteral("@Sailify_VERSION@");
+
+QString PACKAGE_NAME =
+        QStringLiteral("harbour-sailify");
+
+QString PRETTY_PACKAGE_NAME =
+        QStringLiteral("Sailifyt");
+
+} // namespace SailfishConnect

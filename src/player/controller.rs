@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::time::Instant;
 
 use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
@@ -18,7 +19,7 @@ use librespot_playback::player::Player;
 use log::{error, info, warn};
 use tokio_core::reactor::Handle;
 
-use crate::player::qtgateway::{LibrespotEvent, LibrespotGateway};
+use crate::player::qtgateway::{LibrespotEvent, LibrespotEventListener};
 use crate::player::{CLIENT_ID, SCOPES};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -70,7 +71,7 @@ pub struct LibrespotController {
     credentials: Credentials,
     auto_connect_times: Vec<Instant>,
 
-    gateway: LibrespotGateway,
+    listener: Arc<dyn LibrespotEventListener>,
 }
 
 impl LibrespotController {
@@ -78,7 +79,7 @@ impl LibrespotController {
         handle: Handle,
         control_tx: UnboundedSender<ControlMessage>,
         control_rx: UnboundedReceiver<ControlMessage>,
-        gateway: LibrespotGateway,
+        listener: Arc<dyn LibrespotEventListener>,
         setup: LibrespotConfig,
     ) {
         let self_ = LibrespotController {
@@ -100,7 +101,7 @@ impl LibrespotController {
             control_rx,
             control_tx,
 
-            gateway,
+            listener,
         };
         self_.run_internal().await;
     }
@@ -128,13 +129,14 @@ impl LibrespotController {
                     }
                     ControlMessage::RefreshToken => {
                         if let Some(session) = &self.session {
-                            let gateway = self.gateway.clone();
+                            let listener = self.listener.clone();
                             self.handle
                                 .spawn(get_token(&session, CLIENT_ID, SCOPES).then(
                                     move |result| {
                                         let evt_data = result.map_err(|err| format!("{:?}", err));
-                                        gateway
-                                            .send(LibrespotEvent::TokenChanged { token: evt_data });
+                                        listener.notify(LibrespotEvent::TokenChanged {
+                                            token: evt_data,
+                                        });
                                         futures_01::future::ok::<(), ()>(())
                                     },
                                 ));
@@ -148,7 +150,7 @@ impl LibrespotController {
     async fn login(&mut self) -> bool {
         info!("Logging in ...");
         self.spirc = None;
-        self.gateway.send(LibrespotEvent::Connecting);
+        self.listener.notify(LibrespotEvent::Connecting);
 
         // connect with credentials
         let session_future = Session::connect(
@@ -161,7 +163,7 @@ impl LibrespotController {
             Ok(session) => session,
             Err(error) => {
                 error!("Could not connect to server: {}", error);
-                self.gateway.send(LibrespotEvent::ConnectionError {
+                self.listener.notify(LibrespotEvent::ConnectionError {
                     message: format!("{}", error),
                 });
                 return false;
@@ -192,12 +194,12 @@ impl LibrespotController {
             let _ = control_tx.unbounded_send(ControlMessage::AutoReconnect);
         }));
 
-        let gateway = self.gateway.clone();
+        let listener = self.listener.clone();
         self.handle.spawn(
             event_channel
                 .for_each(move |event| {
                     if let Some(evt) = LibrespotEvent::from_event(event) {
-                        gateway.send(evt);
+                        listener.notify(evt);
                     }
                     futures_01::future::ok(())
                 })
@@ -209,14 +211,14 @@ impl LibrespotController {
             .compat()
             .await
             .map_err(|err| format!("{:?}", err));
-        self.gateway.send(LibrespotEvent::TokenChanged { token });
-        self.gateway.send(LibrespotEvent::Connected);
+        self.listener.notify(LibrespotEvent::TokenChanged { token });
+        self.listener.notify(LibrespotEvent::Connected);
 
         true
     }
 
     fn shutdown(&mut self) {
-        self.gateway.send(LibrespotEvent::Shutdown);
+        self.listener.notify(LibrespotEvent::Shutdown);
         if let Some(ref spirc) = self.spirc {
             spirc.shutdown();
         }
@@ -224,7 +226,7 @@ impl LibrespotController {
 
     async fn autoreconnect(&mut self) -> bool {
         warn!("Spirc shut down unexpectedly");
-        self.gateway.send(LibrespotEvent::StartReconnect);
+        self.listener.notify(LibrespotEvent::StartReconnect);
 
         let now = Instant::now();
         while (!self.auto_connect_times.is_empty())
@@ -235,7 +237,7 @@ impl LibrespotController {
 
         if self.auto_connect_times.len() >= 5 {
             warn!("Spirc shut down too often. Not reconnecting automatically.");
-            self.gateway.send(LibrespotEvent::ConnectionError {
+            self.listener.notify(LibrespotEvent::ConnectionError {
                 message: "Spirc shut down too often. Not reconnecting automatically.".to_string(),
             });
             false

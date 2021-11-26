@@ -1,12 +1,15 @@
 /target
 /RPMS
 /installroot
-/rpmbuildroot
+/rpmbuild*
 /.cargo*
 /.tmp
 
 *~
 *.list
+
+# compile commands
+compile_commands.json
 
 # Qt Creator
 *.autosave
