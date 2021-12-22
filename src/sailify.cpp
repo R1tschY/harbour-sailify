@@ -4,9 +4,10 @@
 #include <QDBusConnection>
 #include <QLoggingCategory>
 #include <QGuiApplication>
+#include <QtQuick>
 
 #include "sailify-config.h"
-#include "sailifyplayer.h"
+#include "sailify-player.h"
 
 static Q_LOGGING_CATEGORY(logger, "sailify.app")
 
@@ -23,8 +24,11 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    SailifyPlayer* player = sailify_player_new(nullptr);
-    sailify_player_delete(player);
+    qmlRegisterType<Sailify::SailifyPlayer>("Sailify", 0, 1, "SpotifyPlayer");
+
+    QQuickView* view = SailfishApp::createView();
+    view->setSource(SailfishApp::pathToMainQml());
+    view->showFullScreen();
 
     return app->exec();
 }

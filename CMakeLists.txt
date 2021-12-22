@@ -95,6 +95,7 @@ file(GLOB_RECURSE sailify_QML_SOURCES "qml/*.qml")
 
 set(SAILIFY_SOURCES
     src/sailify.cpp
+    src/sailify-player.cpp
 
     ${sailify_QML_SOURCES}
     ${sailifyplayer_HEADER}

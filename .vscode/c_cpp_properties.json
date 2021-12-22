@@ -1,0 +1,20 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/home/richard/opt/SailfishOS/mersdk/targets/SailfishOS-4.2.0.21-i486.default/usr/include",
+                "/home/richard/opt/SailfishOS/mersdk/targets/SailfishOS-4.2.0.21-i486.default/usr/include/qt5",
+                "/home/richard/opt/SailfishOS/mersdk/targets/SailfishOS-4.2.0.21-i486.default/usr/include/qt5/QtCore"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/clang",
+            "cStandard": "c11",
+            "cppStandard": "c++14",
+            "intelliSenseMode": "linux-clang-x64",
+            "compileCommands": "${workspaceFolder}/compile_commands.json"
+        }
+    ],
+    "version": 4
+}

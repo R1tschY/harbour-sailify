@@ -57,7 +57,7 @@ case "$DEB_BUILD_ARCH_CPU" in
         export SB2_TARGET=aarch64-unknown-linux-gnu
         ;;
 
-    i686)
+    i486)
         export SB2_TARGET=i686-unknown-linux-gnu
         ;;
 
@@ -150,7 +150,25 @@ fi
 
 # - INSTALL --------------------------------------------------------------------
 %install
-CMAKE_BUILD_DIR="%{BUILD_DIR}/%{SB2_TARGET}/release"
+case "$DEB_BUILD_ARCH_CPU" in
+    armv7hl)
+        export SB2_TARGET=armv7-unknown-linux-gnueabihf
+        ;;
+
+    aarch64)
+        export SB2_TARGET=aarch64-unknown-linux-gnu
+        ;;
+
+    i486)
+        export SB2_TARGET=i686-unknown-linux-gnu
+        ;;
+
+    *)
+        echo "Unknown arch $DEB_BUILD_ARCH_CPU"
+        exit 1
+        ;;
+esac
+CMAKE_BUILD_DIR="%{BUILD_DIR}/${SB2_TARGET}/release"
 
 rm -rf %{buildroot}
 DESTDIR=%{buildroot} cmake --build "$CMAKE_BUILD_DIR" --target install

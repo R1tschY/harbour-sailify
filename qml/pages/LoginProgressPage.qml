@@ -8,10 +8,10 @@ Page {
         switch (librespot.connectionStatus) {
         case 0: // disconnected
         case 100: // panic
-            librespot.login();
+            librespot.start();
             break;
         case 1: // connecting
-            progressLabel.text = qsTr("Logging in …")
+            progressLabel.text = qsTr("Connecting …")
             break;
         case 2: // connected
             onComplete()
@@ -40,7 +40,7 @@ Page {
                 onError()
                 break;
             case 1: // connecting
-                progressLabel.text = qsTr("Logging in …")
+                progressLabel.text = qsTr("Connecting …")
                 break;
             case 2: // connected
                 pageStack.replaceAbove(null, Qt.resolvedUrl("MainNavigationPage.qml"))
@@ -75,7 +75,7 @@ Page {
     Label {
         id: progressLabel
         width: page.width
-        text: qsTr("Preparing …")
+        text: qsTr("Loading …")
         anchors.top: busyIndicator.bottom
         anchors.topMargin: Theme.paddingMedium
         horizontalAlignment: Text.AlignHCenter

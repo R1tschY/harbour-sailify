@@ -88,6 +88,8 @@ impl Options {
         } else {
             let mut buffer = Uuid::encode_buffer();
             let device_id = Uuid::new_v4().to_simple().encode_lower(&mut buffer);
+
+            fs::create_dir_all(&cache_dir).unwrap();
             fs::write(&device_id_path, &device_id).unwrap();
             device_id.to_string()
         };

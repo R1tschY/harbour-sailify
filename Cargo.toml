@@ -25,3 +25,5 @@ os-release = "0.1"
 
 quick-error = "2"
 log = "0.4"
+
+env_logger = "0.9.0"

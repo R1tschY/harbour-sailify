@@ -1,3 +1,4 @@
+use std::env;
 use std::sync::mpsc::{channel, TryRecvError};
 use std::sync::{mpsc, Arc};
 use std::time::{Duration, Instant};
@@ -42,16 +43,22 @@ pub struct SailifyPlayer {
     thread: Option<LibrespotThread>,
     options: Options,
     listener: Arc<dyn LibrespotEventListener>,
-    error: Option<LibrespotError>,
+}
+
+fn setup_logging() {
+    let rust_log =
+        env::var("RUST_LOG").unwrap_or("libmdns=info,librespot=info,sailify=debug".to_string());
+
+    env_logger::Builder::new().parse_filters(&rust_log).init();
 }
 
 impl SailifyPlayer {
     pub fn new(listener: Arc<dyn LibrespotEventListener>) -> Self {
+        setup_logging();
         Self {
             thread: None,
             options: Options::new(),
             listener,
-            error: None,
         }
     }
 
@@ -79,28 +86,12 @@ impl SailifyPlayer {
         };
     }
 
-    pub fn error_kind(&self) -> Option<String> {
-        self.error.as_ref().map(|err| err.kind().to_string())
-    }
-
-    pub fn error_string(&self) -> Option<String> {
-        self.error.as_ref().map(|err| format!("{}", &err))
-    }
-
     fn set_error(&mut self, err: LibrespotError) {
         error!("Librespot error: {}", err);
-        self.error = Some(err);
-        self.listener.notify(LibrespotEvent::Error)
+        self.listener.notify(LibrespotEvent::Error { err })
     }
 
-    pub fn logout(&mut self) {
-        info!("Logging out ...");
-
-        self.shutdown();
-        LibrespotThread::remove_credentials(&self.options);
-    }
-
-    pub fn shutdown(&mut self) {
+    pub fn stop(&mut self) {
         if !self.is_running() {
             return;
         }
@@ -108,6 +99,13 @@ impl SailifyPlayer {
         info!("Shutting down ...");
 
         self.shutdown_thread();
+    }
+
+    pub fn logout(&mut self) {
+        info!("Logging out ...");
+
+        self.stop();
+        LibrespotThread::remove_credentials(&self.options);
     }
 
     pub fn play(&mut self) {
@@ -138,6 +136,40 @@ impl SailifyPlayer {
         if let Some(thread) = std::mem::replace(&mut self.thread, None) {
             thread.shutdown()
         }
+    }
+
+    pub fn username(&self) -> Option<&str> {
+        self.options.username.as_ref().map(|s| s as &str)
+    }
+
+    pub fn set_username(&mut self, value: Option<&str>) {
+        self.options.username = value.map(|s| s.to_string());
+    }
+
+    pub fn password(&self) -> Option<&str> {
+        self.options.password.as_ref().map(|s| s as &str)
+    }
+
+    pub fn set_password(&mut self, value: Option<&str>) {
+        self.options.password = value.map(|s| s.to_string());
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.thread.is_some()
+    }
+
+    pub fn refresh_access_token(&self) {
+        if let Some(ref thread) = &self.thread {
+            thread.refresh_token()
+        }
+    }
+
+    pub fn device_id(&self) -> &str {
+        &self.options.device_id
+    }
+
+    pub fn device_name(&self) -> &str {
+        &self.options.device_name
     }
 }
 
@@ -186,23 +218,6 @@ impl Drop for SailifyPlayer {
 //
 //             listener,
 //         }
-//     }
-//
-//     pub fn username(&self) -> QString {
-//         self.options.username.to_qstring()
-//     }
-//
-//     pub fn set_username(&mut self, value: &QString) {
-//         self.options.username = from_qstring(value);
-//     }
-//
-//     // #[property(write = set_password, notify = password_changed)]
-//     pub fn password(&self) -> QString {
-//         self.options.password.to_qstring()
-//     }
-//
-//     pub fn set_password(&mut self, value: &QString) {
-//         self.options.password = from_qstring(value);
 //     }
 //
 //     // #[slot]
@@ -295,106 +310,6 @@ impl Drop for SailifyPlayer {
 //                 self.thread = None;
 //             }
 //         }*/
-//     }
-//
-//     // #[slot]
-//     pub fn login(&mut self) {
-//         if self.is_active() {
-//             warn!("Already logged in");
-//             return;
-//         }
-//
-//         info!("Logging in ...");
-//
-//         match LibrespotThread::run(gateway, self.options.clone()) {
-//             Ok(thread) => {
-//                 self.thread = Some(thread);
-//                 unsafe { &mut *self.qobject }.active_changed(true);
-//             }
-//             Err(err) => self.set_error(err),
-//         }
-//     }
-//
-//     // #[slot]
-//     pub fn logout(&mut self) {
-//         info!("Logging out ...");
-//
-//         self.shutdown();
-//         LibrespotThread::remove_credentials(&self.options);
-//     }
-//
-//     // #[slot]
-//     pub fn shutdown(&mut self) {
-//         if !self.is_active() {
-//             return;
-//         }
-//
-//         info!("Shutting down ...");
-//
-//         self.shutdown_thread();
-//         self.set_connection_status(ConnectionStatus::Disconnected);
-//         self.set_media_status(MediaStatus::NoMedia);
-//
-//         unsafe { &mut *self.qobject }.active_changed(false);
-//     }
-//
-//     // #[slot]
-//     pub fn play(&mut self) {
-//         if let Some(ref thread) = &self.thread {
-//             thread.play()
-//         }
-//     }
-//
-//     // #[slot]
-//     pub fn pause(&mut self) {
-//         if let Some(ref thread) = &self.thread {
-//             thread.pause()
-//         }
-//     }
-//
-//     // #[slot]
-//     pub fn next(&mut self) {
-//         if let Some(ref thread) = &self.thread {
-//             thread.next()
-//         }
-//     }
-//
-//     // #[slot]
-//     pub fn previous(&mut self) {
-//         if let Some(ref thread) = &self.thread {
-//             thread.previous()
-//         }
-//     }
-//
-//     fn shutdown_thread(&mut self) {
-//         if let Some(thread) = std::mem::replace(&mut self.thread, None) {
-//             thread.shutdown()
-//         }
-//     }
-//
-//     // active
-//
-//     pub fn is_active(&self) -> bool {
-//         self.thread.is_some()
-//     }
-//
-//     // error
-//
-//     pub fn error_kind(&self) -> QString {
-//         self.error.as_ref().map(|err| err.kind()).to_qstring()
-//     }
-//
-//     pub fn error_string(&self) -> QString {
-//         self.error
-//             .as_ref()
-//             .map(|err| format!("{}", &err))
-//             .to_qstring()
-//     }
-//
-//     fn set_error(&mut self, err: LibrespotError) {
-//         error!("Librespot error: {}", err);
-//         self.error = Some(err);
-//         unsafe { &mut *self.qobject }.error_occurred();
 //     }
 //
 //     // status
@@ -497,59 +412,6 @@ impl Drop for SailifyPlayer {
 //         }
 //     }
 //
-//     // token
-//
-//     pub fn access_token(&self) -> QString {
-//         self.access_token
-//             .as_ref()
-//             .map(|t| &t.0 as &str)
-//             .to_qstring()
-//     }
-//
-//     pub fn access_token_expires_in(&self) -> i32 {
-//         if let Some(access_token) = &self.access_token {
-//             access_token
-//                 .1
-//                 .saturating_duration_since(Instant::now())
-//                 .as_secs() as i32
-//         } else {
-//             0
-//         }
-//     }
-//
-//     fn set_access_token(&mut self, value: Result<Token, String>) {
-//         match value {
-//             Ok(token) => {
-//                 self.access_token = Some((
-//                     token.access_token,
-//                     Instant::now() + Duration::from_secs(token.expires_in as u64),
-//                 ))
-//             }
-//             Err(err) => {
-//                 self.access_token = None;
-//                 warn!("Failed to get token: {}", err);
-//             }
-//         }
-//         unsafe { &mut *self.qobject }.access_token_changed();
-//     }
-//
-//     pub fn refresh_access_token(&self) {
-//         if let Some(ref thread) = &self.thread {
-//             thread.refresh_token()
-//         }
-//     }
-//
-//     // device id
-//
-//     pub fn device_id(&self) -> QString {
-//         self.options.device_id.to_qstring()
-//     }
-//
-//     // device name
-//
-//     pub fn device_name(&self) -> QString {
-//         self.options.device_name.to_qstring()
-//     }
 //
 //     // private
 //

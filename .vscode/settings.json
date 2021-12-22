@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "*.ts": "xml",
+        "qobject": "cpp",
+        "chrono": "cpp"
+    }
+}
