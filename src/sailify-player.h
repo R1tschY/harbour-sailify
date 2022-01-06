@@ -145,7 +145,7 @@ private:
     void onVolumeChanged(quint16 value);
     void onConnecting();
     void onConnected();
-    void onError(SailifyErrorKind kind, const QString& trackId);
+    void onError(SailifyErrorKind kind, const QString& message);
     void onShutdown();
     void onStartReconnect();
     void onTokenChanged(const QString& accessToken, quint32 expiresIn);
@@ -160,9 +160,11 @@ private:
 class SailifyPlayerCallback : public QObject {
     Q_OBJECT
 public:
-    SailifyPlayerCallback(SailifyPlayer* parent) : QObject(parent) {}
+    SailifyPlayerCallback() {
+        moveToThread(nullptr);
+    }
 
-    ::SailifyCallback getFfiCallback() const;
+    ::SailifyCallback createFfiCallback();
 
 signals:
     void stopped(quint64 play_request_id, const QString& track_id);
@@ -200,3 +202,5 @@ private:
 };
 
 }
+
+Q_DECLARE_METATYPE(SailifyErrorKind)

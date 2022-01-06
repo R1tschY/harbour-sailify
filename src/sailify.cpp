@@ -15,6 +15,7 @@ using namespace Sailify;
 
 int main(int argc, char *argv[]) {
     std::unique_ptr<QGuiApplication> app(SailfishApp::application(argc, argv));
+    QLoggingCategory::setFilterRules("sailify.*=true");
 
     // Instance check
     QDBusConnection sessionBus = QDBusConnection::sessionBus();
@@ -25,6 +26,7 @@ int main(int argc, char *argv[]) {
     }
 
     qmlRegisterType<Sailify::SailifyPlayer>("Sailify", 0, 1, "SpotifyPlayer");
+    qRegisterMetaType<SailifyErrorKind>();
 
     QQuickView* view = SailfishApp::createView();
     view->setSource(SailfishApp::pathToMainQml());

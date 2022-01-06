@@ -2,7 +2,6 @@
 
 #include <QLoggingCategory>
 #include <QDateTime>
-#include <QDateTime>
 
 namespace Sailify {
 
@@ -22,8 +21,8 @@ static inline SailifyStringView toFfi(const QByteArray& utf8) {
 }
 
 SailifyPlayer::SailifyPlayer() {
-    auto* callback = new SailifyPlayerCallback(this);
-    auto ffiCallback = callback->getFfiCallback();
+    auto* callback = new SailifyPlayerCallback();
+    auto ffiCallback = callback->createFfiCallback();
     m_player = ::sailify_player_new(&ffiCallback);
 
     m_positionTimer.setInterval(1000);
@@ -333,9 +332,9 @@ void SailifyPlayer::onTokenChanged(const QString& accessToken, quint32 expiresIn
     emit onTokenChanged(accessToken, expiresIn);
 }
 
-::SailifyCallback SailifyPlayerCallback::getFfiCallback() const {
+::SailifyCallback SailifyPlayerCallback::createFfiCallback() {
     SailifyCallback callback = {
-        .user_data = parent(),
+        .user_data = this,
         .stopped = SailifyPlayerCallback::onStopped,
         .changed = SailifyPlayerCallback::onChanged,
         .loading = SailifyPlayerCallback::onLoading,
@@ -390,7 +389,6 @@ void SailifyPlayerCallback::onConnected(void *user_data) {
 }
 
 void SailifyPlayerCallback::onError(void *user_data, SailifyErrorKind kind, SailifyStringView message) {
-    qCCritical(logger) << "onError" << message;
     emit static_cast<SailifyPlayerCallback*>(user_data)->error(kind, toQString(message));
 }
 
