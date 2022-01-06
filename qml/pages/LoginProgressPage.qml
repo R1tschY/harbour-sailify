@@ -1,5 +1,6 @@
 import QtQuick 2.0
 import Sailfish.Silica 1.0
+import Sailify 0.1
 
 Page {
     id: page
@@ -56,7 +57,7 @@ Page {
 
     function onError(error) {
         pageStack.completeAnimation()
-        if (librespot.errorKind === "missing-credentials") {
+        if (librespot.errorKind === SailifyPlayer.MissingCredentials) {
             pageStack.replace(Qt.resolvedUrl("LoginPage.qml"), {}, PageStackAction.Immediate)
         } else {
             pageStack.replace(Qt.resolvedUrl("LoginErrorPage.qml"), {}, PageStackAction.Immediate)
