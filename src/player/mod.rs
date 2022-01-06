@@ -31,7 +31,7 @@ pub mod error;
 pub mod qobject;
 pub mod qtgateway;
 
-pub const CLIENT_ID: &str = env!("HOME");
+pub const CLIENT_ID: &str = env!("SAILIFY_CLIENT_ID");
 
 pub const SCOPES: &str = "user-read-private,\
 playlist-read-private,\
