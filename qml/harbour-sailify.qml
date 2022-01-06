@@ -16,7 +16,7 @@ ApplicationWindow
     initialPage: Component { LoginProgressPage { } }
     cover: Qt.resolvedUrl("cover/CoverPage.qml")
 
-    SpotifyPlayer {
+    SailifyPlayer {
         id: librespot
     }
 

@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    qmlRegisterType<Sailify::SailifyPlayer>("Sailify", 0, 1, "SpotifyPlayer");
+    qmlRegisterType<Sailify::SailifyPlayer>("Sailify", 0, 1, "SailifyPlayer");
     qRegisterMetaType<SailifyErrorKind>();
 
     QQuickView* view = SailfishApp::createView();
