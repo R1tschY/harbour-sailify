@@ -79,7 +79,7 @@ impl<'a> ToInternal for SailifyStringView<'a> {
     type Item = Option<&'a str>;
 
     fn to_internal(&self) -> Self::Item {
-        if self.ptr.is_null() {
+        if !self.ptr.is_null() {
             unsafe {
                 Some(std::str::from_utf8_unchecked(std::slice::from_raw_parts(
                     self.ptr as *const _ as *const u8,
