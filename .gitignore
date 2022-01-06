@@ -21,3 +21,13 @@ compile_commands.json
 
 # dotenv
 .env
+
+# CMake
+CMakeCache.txt
+*.cmake
+CMakeFiles/
+QtCreatorDeployment.txt
+sailifyplayer.h
+Makefile
+*_autogen
+
