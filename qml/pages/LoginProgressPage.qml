@@ -7,14 +7,14 @@ Page {
 
     Component.onCompleted: {
         switch (librespot.connectionStatus) {
-        case 0: // disconnected
-        case 100: // panic
+        case SailifyPlayer.Disconnected:
+        case SailifyPlayer.Crashed:
             librespot.start();
             break;
-        case 1: // connecting
+        case SailifyPlayer.Connecting:
             progressLabel.text = qsTr("Connecting …")
             break;
-        case 2: // connected
+        case SailifyPlayer.Connected:
             onComplete()
             break;
         }
@@ -36,14 +36,14 @@ Page {
 
         onTriggered: {
             switch (librespot.connectionStatus) {
-            case 0: // disconnected
-            case 100:
+            case SailifyPlayer.Disconnected:
+            case SailifyPlayer.Crashed:
                 onError()
                 break;
-            case 1: // connecting
+            case SailifyPlayer.Connecting:
                 progressLabel.text = qsTr("Connecting …")
                 break;
-            case 2: // connected
+            case SailifyPlayer.Connected:
                 pageStack.replaceAbove(null, Qt.resolvedUrl("MainNavigationPage.qml"))
                 break;
             }

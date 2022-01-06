@@ -267,19 +267,19 @@ void SailifyPlayer::onUnavailable(quint64 playRequestId, const QString& trackId)
 }
 
 void SailifyPlayer::onVolumeChanged(quint16 value) {
-    qCDebug(logger) << "Volume changed:" << value;
     if (value != m_volume) {
+        qCDebug(logger) << "Volume changed:" << value;
         m_volume = value;
         emit onVolumeChanged(value);
     }
 }
 
 void SailifyPlayer::setConnectionStatus(ConnectionStatus value) {
-    if (m_connectionStatus == value) {
-        return;
+    if (m_connectionStatus != value) {
+        qCDebug(logger) << "Connection status changed:" << value;
+        m_connectionStatus = value;
+        emit connectionStatusChanged();
     }
-
-    m_connectionStatus = value;
 }
 
 void SailifyPlayer::onConnecting() {
