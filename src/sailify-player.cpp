@@ -329,7 +329,7 @@ void SailifyPlayer::onTokenChanged(const QString& accessToken, quint32 expiresIn
 
     m_accessToken = accessToken;
     m_accessTokenExpiresAt = QDateTime::currentMSecsSinceEpoch() + expiresIn;
-    emit onTokenChanged(accessToken, expiresIn);
+    emit accessTokenChanged();
 }
 
 ::SailifyCallback SailifyPlayerCallback::createFfiCallback() {
