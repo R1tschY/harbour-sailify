@@ -78,8 +78,7 @@ impl Default for Options {
     fn default() -> Self {
         let hw_name = OsRelease::new_from("/etc/hw-release")
             .ok()
-            .map(|hw| hw.name)
-            .unwrap_or_else(|| "Sailfish OS".to_string());
+            .map_or_else(|| "Sailfish OS".to_string(), |hw| hw.name);
         let cache_dir = xdg::config_home().join("harbour-sailify").join("librespot");
 
         let device_id_path = cache_dir.join("device_id");
@@ -91,7 +90,7 @@ impl Default for Options {
 
             fs::create_dir_all(&cache_dir).unwrap();
             fs::write(&device_id_path, &device_id).unwrap();
-            device_id.to_string()
+            (*device_id).to_string()
         };
 
         Self {
@@ -104,7 +103,7 @@ impl Default for Options {
             password: None,
             proxy: None,
             ap_port: None,
-            format: Default::default(),
+            format: AudioFormat::default(),
             backend: None,
             backend_device: None,
             mixer: None,
@@ -140,7 +139,7 @@ fn setup(opts: Options) -> LibrespotResult<LibrespotConfig> {
         device: opts.mixer_card,
         index: opts.mixer_index,
         control: opts.mixer_name,
-        volume_ctrl: Default::default(),
+        volume_ctrl: VolumeCtrl::default(),
     };
 
     let cache = Cache::new(opts.system_cache, opts.audio_cache, opts.cache_size_limit)?;
@@ -148,10 +147,8 @@ fn setup(opts: Options) -> LibrespotResult<LibrespotConfig> {
     let initial_volume = opts
         .initial_volume
         .map(|volume| {
-            if volume > 100 {
-                panic!("Initial volume must be in the range 0-100");
-            }
-            (volume as i32 * 0xFFFF / 100) as u16
+            assert!(volume <= 100, "Initial volume must be in the range 0-100");
+            (i32::from(volume) * 0xFFFF / 100) as u16
         })
         .or_else(|| cache.volume());
 
@@ -176,7 +173,7 @@ fn setup(opts: Options) -> LibrespotResult<LibrespotConfig> {
         normalisation_pregain: opts
             .normalisation_pregain
             .unwrap_or(PlayerConfig::default().normalisation_pregain),
-        ..Default::default()
+        ..PlayerConfig::default()
     };
 
     let connect_config = ConnectConfig {
@@ -247,12 +244,12 @@ impl LibrespotThread {
                         listener_clone,
                         setup,
                     );
-                    let _ = core.block_on(controller_future);
+                    core.block_on(controller_future);
                     info!("CORE END");
                 });
                 if let Err(err) = result {
                     let message = if let Some(s) = err.downcast_ref::<&str>() {
-                        s.to_string()
+                        (*s).to_string()
                     } else if let Some(s) = err.downcast_ref::<String>() {
                         s.clone()
                     } else {

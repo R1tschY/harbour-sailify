@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+#[must_use]
 pub fn config_home() -> PathBuf {
     std::env::var_os("XDG_CONFIG_HOME")
         .unwrap_or_else(|| {

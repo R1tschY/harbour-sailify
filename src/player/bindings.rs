@@ -29,7 +29,7 @@ impl<'a> SailifyStringView<'a> {
 
 impl<'a> From<&str> for SailifyStringView<'a> {
     fn from(value: &str) -> Self {
-        Self::new(value.as_ptr() as *const _ as *const c_char, value.len())
+        Self::new(value.as_ptr().cast::<c_char>(), value.len())
     }
 }
 
@@ -79,15 +79,15 @@ impl<'a> ToInternal for SailifyStringView<'a> {
     type Item = Option<&'a str>;
 
     fn to_internal(&self) -> Self::Item {
-        if !self.ptr.is_null() {
+        if self.ptr.is_null() {
+            None
+        } else {
             unsafe {
                 Some(std::str::from_utf8_unchecked(std::slice::from_raw_parts(
-                    self.ptr as *const _ as *const u8,
+                    self.ptr.cast::<u8>(),
                     self.len,
                 )))
             }
-        } else {
-            None
         }
     }
 }
@@ -106,7 +106,7 @@ impl<'a> IntoFfi for String {
     type Ffi = *mut SailifyString;
 
     fn into_ffi(self) -> *mut SailifyString {
-        Box::into_raw(self.into_boxed_str()) as *mut _
+        Box::into_raw(self.into_boxed_str()).cast::<SailifyString>()
     }
 }
 
@@ -210,7 +210,7 @@ pub unsafe extern "C" fn sailify_player_is_active(this: &mut SailifyPlayer) -> b
 
 #[no_mangle]
 pub unsafe extern "C" fn sailify_player_refresh_access_token(this: &mut SailifyPlayer) {
-    this.refresh_access_token()
+    this.refresh_access_token();
 }
 
 #[no_mangle]
@@ -380,7 +380,7 @@ impl LibrespotEventListener for SailifyCallback {
                         token.expires_in,
                     ),
                     Err(err) => {
-                        (self.error)(self.user_data, SailifyErrorKind::Token, string_to_ffi(&err))
+                        (self.error)(self.user_data, SailifyErrorKind::Token, string_to_ffi(&err));
                     }
                 },
                 LibrespotEvent::Error { err } => {

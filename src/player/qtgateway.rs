@@ -57,6 +57,7 @@ pub enum LibrespotEvent {
 }
 
 impl LibrespotEvent {
+    #[must_use]
     pub fn from_event(evt: PlayerEvent) -> Option<Self> {
         Some(match evt {
             PlayerEvent::Playing {

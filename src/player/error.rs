@@ -30,6 +30,7 @@ quick_error! {
 pub type LibrespotResult<T> = Result<T, LibrespotError>;
 
 impl LibrespotError {
+    #[must_use]
     pub fn kind(&self) -> &'static str {
         match self {
             LibrespotError::MissingCredentials => "missing-credentials",
