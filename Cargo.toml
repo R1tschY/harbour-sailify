@@ -13,17 +13,20 @@ crate-type = ["staticlib"]
 
 [dependencies]
 # librespot
-librespot-connect = "^0.1.6"
-librespot-core = "^0.1.6"
-librespot-playback = { version = "^0.1.6", default-features = false, features = ["pulseaudio-backend"]}
-tokio-core = "0.1"
-tokio-io = "0.1"
-futures = { version = "0.3", features = ["compat"], default-features = false }
-futures_01 = { version = "0.1", package = "futures" }
-uuid = { version = "0.8", default-features = false, features = ["v4"] }
-os-release = "0.1"
+librespot-connect = "^0.3.1"
+librespot-core = "^0.3.1"
+librespot-playback = { version = "^0.3.1", default-features = false, features = ["pulseaudio-backend"]}
+protobuf = "^2.25.2"
 
+# async runtime
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "sync"] }
+futures = { version = "0.3", default-features = false }
+
+# device name and ID
+os-release = "0.1"
+uuid = { version = "0.8", default-features = false, features = ["v4"] }
+
+# utils
 quick-error = "2"
 log = "0.4"
-
 env_logger = "0.9.0"

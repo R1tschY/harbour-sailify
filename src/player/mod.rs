@@ -10,14 +10,14 @@ use futures::channel::mpsc::{unbounded, UnboundedSender};
 use futures::{FutureExt, TryFutureExt};
 use librespot_core::authentication::Credentials;
 use librespot_core::cache::Cache;
-use librespot_core::config::{ConnectConfig, DeviceType, SessionConfig, VolumeCtrl};
+use librespot_core::config::{ConnectConfig, DeviceType, SessionConfig};
 use librespot_core::version;
 use librespot_playback::audio_backend;
-use librespot_playback::config::{Bitrate, PlayerConfig};
+use librespot_playback::config::{AudioFormat, Bitrate, PlayerConfig, VolumeCtrl};
 use librespot_playback::mixer::{self, MixerConfig};
 use log::{error, info, warn};
 use os_release::OsRelease;
-use tokio_core::reactor::Core;
+use tokio::runtime::{Builder, Runtime};
 use uuid::Uuid;
 
 use crate::player::controller::{ControlMessage, LibrespotConfig, LibrespotController};
@@ -50,8 +50,8 @@ streaming";
 
 #[derive(Clone)]
 pub struct Options {
-    pub cache: PathBuf,
-    pub audio_cache: bool,
+    pub system_cache: Option<PathBuf>,
+    pub audio_cache: Option<PathBuf>,
     pub device_name: String,
     pub device_id: String,
     pub bitrate: Bitrate,
@@ -59,19 +59,20 @@ pub struct Options {
     pub password: Option<String>,
     pub proxy: Option<String>,
     pub ap_port: Option<u16>,
+    pub format: AudioFormat,
     pub backend: Option<String>,
     pub backend_device: Option<String>,
     pub mixer: Option<String>,
     pub mixer_name: String,
     pub mixer_card: String,
     pub mixer_index: u32,
-    pub mixer_linear_volume: bool,
     pub initial_volume: Option<u16>,
     pub volume_normalisation: bool,
-    pub normalisation_pregain: Option<f32>,
+    pub normalisation_pregain: Option<f64>,
     pub volume_ctrl: VolumeCtrl,
     pub autoplay: bool,
     pub gapless: bool,
+    pub cache_size_limit: Option<u64>,
 }
 
 impl Options {
@@ -95,8 +96,8 @@ impl Options {
         };
 
         Self {
-            cache: cache_dir,
-            audio_cache: true,
+            audio_cache: Some(cache_dir.join("files")),
+            system_cache: Some(cache_dir),
             device_name: hw_name,
             device_id,
             bitrate: Bitrate::default(),
@@ -104,19 +105,20 @@ impl Options {
             password: None,
             proxy: None,
             ap_port: None,
+            format: Default::default(),
             backend: None,
             backend_device: None,
             mixer: None,
             mixer_name: "PCM".to_string(),
             mixer_card: "default".to_string(),
             mixer_index: 0,
-            mixer_linear_volume: false,
             initial_volume: None,
             volume_normalisation: false,
             normalisation_pregain: None,
             volume_ctrl: VolumeCtrl::default(),
             autoplay: false,
             gapless: true,
+            cache_size_limit: Some(2 * 1024 * 1024 * 1024),
         }
     }
 }
@@ -125,25 +127,24 @@ fn setup(opts: Options) -> LibrespotResult<LibrespotConfig> {
     info!(
         "sailify/{} librespot/{}",
         env!("CARGO_PKG_VERSION"),
-        version::semver(),
+        version::SEMVER,
     );
 
     let backend = audio_backend::find(opts.backend.clone()).ok_or_else(|| {
         LibrespotError::IllegalConfig(format!("Invalid backend {:?}", &opts.backend))
     })?;
 
-    let mixer = mixer::find(opts.mixer.as_ref())
+    let mixer = mixer::find(opts.mixer.as_ref().map(|s| s as &str))
         .ok_or_else(|| LibrespotError::IllegalConfig(format!("Invalid mixer {:?}", &opts.mixer)))?;
 
     let mixer_config = MixerConfig {
-        card: opts.mixer_card,
-        mixer: opts.mixer_name,
+        device: opts.mixer_card,
         index: opts.mixer_index,
-        mapped_volume: !opts.mixer_linear_volume,
+        control: opts.mixer_name,
+        volume_ctrl: Default::default(),
     };
 
-    let audio_cache: bool = opts.audio_cache;
-    let cache = Cache::new(opts.cache, audio_cache);
+    let cache = Cache::new(opts.system_cache, opts.audio_cache, opts.cache_size_limit)?;
 
     let initial_volume = opts
         .initial_volume
@@ -153,8 +154,7 @@ fn setup(opts: Options) -> LibrespotResult<LibrespotConfig> {
             }
             (volume as i32 * 0xFFFF / 100) as u16
         })
-        .or_else(|| Cache::volume(&cache))
-        .unwrap_or(0x8000);
+        .or_else(|| cache.volume());
 
     let credentials = match (opts.username, opts.password) {
         (Some(username), Some(password)) => Credentials::with_password(username, password),
@@ -164,30 +164,30 @@ fn setup(opts: Options) -> LibrespotResult<LibrespotConfig> {
     };
 
     let session_config = SessionConfig {
-        user_agent: version::version_string(),
+        user_agent: version::VERSION_STRING.to_string(),
         device_id: opts.device_id,
         proxy: None,
         ap_port: opts.ap_port,
     };
 
-    let player_config = PlayerConfig {
-        bitrate: opts.bitrate,
-        gapless: opts.gapless,
-        normalisation: opts.volume_normalisation,
-        normalisation_pregain: opts
-            .normalisation_pregain
-            .unwrap_or(PlayerConfig::default().normalisation_pregain),
-    };
+    let mut player_config = PlayerConfig::default();
+    player_config.bitrate = opts.bitrate;
+    player_config.gapless = opts.gapless;
+    player_config.normalisation = opts.volume_normalisation;
+    player_config.normalisation_pregain = opts
+        .normalisation_pregain
+        .unwrap_or(PlayerConfig::default().normalisation_pregain);
 
     let connect_config = ConnectConfig {
         name: opts.device_name,
         device_type: DeviceType::Smartphone,
-        volume: initial_volume,
-        volume_ctrl: opts.volume_ctrl,
+        initial_volume,
+        has_volume_ctrl: !matches!(mixer_config.volume_ctrl, VolumeCtrl::Fixed),
         autoplay: opts.autoplay,
     };
 
     Ok(LibrespotConfig {
+        format: opts.format,
         backend,
         cache,
         session_config,
@@ -207,12 +207,14 @@ pub struct LibrespotThread {
 
 impl LibrespotThread {
     pub fn remove_credentials(opts: &Options) {
-        match fs::remove_file(opts.cache.join("credentials.json")) {
-            Ok(_) => (),
-            Err(err) if err.kind() == io::ErrorKind::NotFound => (),
-            // TODO: what should we do?
-            Err(err) => error!("Failed to remove credentials: {:?}", err),
-        };
+        if let Some(system_cache) = &opts.system_cache {
+            match fs::remove_file(system_cache.join("credentials.json")) {
+                Ok(_) => (),
+                Err(err) if err.kind() == io::ErrorKind::NotFound => (),
+                // TODO: what should we do?
+                Err(err) => error!("Failed to remove credentials: {:?}", err),
+            };
+        }
     }
 
     pub fn run(
@@ -231,18 +233,17 @@ impl LibrespotThread {
                 let listener_clone = listener.clone();
                 let result = panic::catch_unwind(move || {
                     info!("CORE START");
-                    let mut core = Core::new().unwrap();
-
+                    let mut core = Builder::new_current_thread().build().unwrap();
                     let (control_tx, control_rx) = x.into_inner().unwrap();
 
                     let controller_future = LibrespotController::run(
-                        core.handle(),
+                        core.handle().clone(),
                         control_tx,
                         control_rx,
                         listener_clone,
                         setup,
                     );
-                    let _ = core.run(Box::pin(controller_future.unit_error()).compat());
+                    let _ = core.block_on(controller_future);
                     info!("CORE END");
                 });
                 if let Err(err) = result {

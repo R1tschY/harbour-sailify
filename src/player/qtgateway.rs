@@ -117,3 +117,5 @@ impl LibrespotEvent {
 pub trait LibrespotEventListener: RefUnwindSafe + UnwindSafe + Sync + Send {
     fn notify(&self, evt: LibrespotEvent);
 }
+
+pub type LibrespotEventListenerRef = Arc<dyn LibrespotEventListener>;

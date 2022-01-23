@@ -2,24 +2,21 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
-use futures::compat::Future01CompatExt;
-use futures::StreamExt;
-use futures_01::future::Future as Future01;
-use futures_01::stream::Stream as Stream01;
+use futures::{FutureExt, StreamExt};
 use librespot_connect::spirc::Spirc;
 use librespot_core::authentication::Credentials;
 use librespot_core::cache::Cache;
 use librespot_core::config::{ConnectConfig, SessionConfig};
 use librespot_core::keymaster::get_token;
 use librespot_core::session::Session;
-use librespot_playback::audio_backend::Sink;
-use librespot_playback::config::PlayerConfig;
-use librespot_playback::mixer::{Mixer, MixerConfig};
-use librespot_playback::player::Player;
+use librespot_playback::audio_backend::{Sink, SinkBuilder};
+use librespot_playback::config::{AudioFormat, PlayerConfig};
+use librespot_playback::mixer::{Mixer, MixerConfig, MixerFn};
+use librespot_playback::player::{Player, PlayerEventChannel};
 use log::{error, info, warn};
-use tokio_core::reactor::Handle;
+use tokio::runtime::Handle;
 
-use crate::player::qtgateway::{LibrespotEvent, LibrespotEventListener};
+use crate::player::qtgateway::{LibrespotEvent, LibrespotEventListener, LibrespotEventListenerRef};
 use crate::player::{CLIENT_ID, SCOPES};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -38,10 +35,11 @@ pub enum ControlMessage {
 
 #[derive(Clone)]
 pub struct LibrespotConfig {
-    pub backend: fn(Option<String>) -> Box<dyn Sink>,
+    pub format: AudioFormat,
+    pub backend: SinkBuilder,
     pub device: Option<String>,
 
-    pub mixer: fn(Option<MixerConfig>) -> Box<dyn Mixer>,
+    pub mixer: MixerFn,
 
     pub cache: Cache,
     pub player_config: PlayerConfig,
@@ -56,9 +54,10 @@ pub struct LibrespotController {
     player_config: PlayerConfig,
     session_config: SessionConfig,
     connect_config: ConnectConfig,
-    backend: fn(Option<String>) -> Box<dyn Sink>,
+    format: AudioFormat,
+    backend: SinkBuilder,
     device: Option<String>,
-    mixer: fn(Option<MixerConfig>) -> Box<dyn Mixer>,
+    mixer: MixerFn,
     mixer_config: MixerConfig,
     handle: Handle,
 
@@ -88,6 +87,7 @@ impl LibrespotController {
             session_config: setup.session_config,
             player_config: setup.player_config,
             connect_config: setup.connect_config,
+            format: setup.format,
             backend: setup.backend,
             device: setup.device,
             mixer: setup.mixer,
@@ -104,6 +104,13 @@ impl LibrespotController {
             listener,
         };
         self_.run_internal().await;
+    }
+
+    async fn get_token(session: Session, listener: LibrespotEventListenerRef) {
+        let token_result = get_token(&session, CLIENT_ID, SCOPES).await;
+        listener.notify(LibrespotEvent::TokenChanged {
+            token: token_result.map_err(|err| format!("{:?}", err)),
+        });
     }
 
     pub async fn run_internal(mut self) {
@@ -129,17 +136,8 @@ impl LibrespotController {
                     }
                     ControlMessage::RefreshToken => {
                         if let Some(session) = &self.session {
-                            let listener = self.listener.clone();
                             self.handle
-                                .spawn(get_token(&session, CLIENT_ID, SCOPES).then(
-                                    move |result| {
-                                        let evt_data = result.map_err(|err| format!("{:?}", err));
-                                        listener.notify(LibrespotEvent::TokenChanged {
-                                            token: evt_data,
-                                        });
-                                        futures_01::future::ok::<(), ()>(())
-                                    },
-                                ));
+                                .spawn(Self::get_token(session.clone(), self.listener.clone()));
                         }
                     }
                 };
@@ -157,14 +155,13 @@ impl LibrespotController {
             self.session_config.clone(),
             self.credentials.clone(),
             Some(self.cache.clone()),
-            self.handle.clone(),
         );
-        let session = match session_future.compat().await {
+        let session = match session_future.await {
             Ok(session) => session,
             Err(error) => {
-                error!("Could not connect to server: {}", error);
+                error!("Could not connect to server: {:?}", error);
                 self.listener.notify(LibrespotEvent::ConnectionError {
-                    message: format!("{}", error),
+                    message: format!("{:?}", error),
                 });
                 return false;
             }
@@ -174,41 +171,35 @@ impl LibrespotController {
 
         // setup
         let mixer_config = self.mixer_config.clone();
-        let mixer = (self.mixer)(Some(mixer_config));
+        let mixer = (self.mixer)(mixer_config);
         let player_config = self.player_config.clone();
         let connect_config = self.connect_config.clone();
 
         let audio_filter = mixer.get_audio_filter();
+        let format = self.format;
         let backend = self.backend;
         let device = self.device.clone();
         let (player, event_channel) =
             Player::new(player_config, session.clone(), audio_filter, move || {
-                (backend)(device)
+                (backend)(device, format)
             });
 
         let (spirc, spirc_task) = Spirc::new(connect_config, session.clone(), player, mixer);
         self.spirc = Some(spirc);
 
         let control_tx = self.control_tx.clone();
-        self.handle.spawn(spirc_task.map(move |()| {
+        self.handle.spawn(async move {
+            spirc_task.await;
             let _ = control_tx.unbounded_send(ControlMessage::AutoReconnect);
-        }));
+        });
 
-        let listener = self.listener.clone();
-        self.handle.spawn(
-            event_channel
-                .for_each(move |event| {
-                    if let Some(evt) = LibrespotEvent::from_event(event) {
-                        listener.notify(evt);
-                    }
-                    futures_01::future::ok(())
-                })
-                .map_err(|_| ()),
-        );
+        self.handle.spawn(Self::run_event_channel(
+            event_channel,
+            self.listener.clone(),
+        ));
 
         // get token
         let token = get_token(&session, CLIENT_ID, SCOPES)
-            .compat()
             .await
             .map_err(|err| format!("{:?}", err));
         self.listener.notify(LibrespotEvent::TokenChanged { token });
@@ -221,6 +212,17 @@ impl LibrespotController {
         self.listener.notify(LibrespotEvent::Shutdown);
         if let Some(ref spirc) = self.spirc {
             spirc.shutdown();
+        }
+    }
+
+    async fn run_event_channel(
+        mut event_channel: PlayerEventChannel,
+        listener: LibrespotEventListenerRef,
+    ) {
+        while let Some(event) = event_channel.recv().await {
+            if let Some(evt) = LibrespotEvent::from_event(event) {
+                listener.notify(evt);
+            }
         }
     }
 
