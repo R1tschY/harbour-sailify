@@ -1,9 +1,6 @@
 use std::env;
-use std::sync::mpsc::{channel, TryRecvError};
-use std::sync::{mpsc, Arc};
-use std::time::{Duration, Instant};
+use std::sync::Arc;
 
-use librespot_core::keymaster::Token;
 use log::{error, info, warn};
 
 use crate::player::error::LibrespotError;
@@ -46,8 +43,8 @@ pub struct SailifyPlayer {
 }
 
 fn setup_logging() {
-    let rust_log =
-        env::var("RUST_LOG").unwrap_or("libmdns=info,librespot=info,sailify=debug".to_string());
+    let rust_log = env::var("RUST_LOG")
+        .unwrap_or_else(|_| "libmdns=info,librespot=info,sailify=debug".to_string());
 
     env_logger::Builder::new().parse_filters(&rust_log).init();
 }
@@ -57,7 +54,7 @@ impl SailifyPlayer {
         setup_logging();
         Self {
             thread: None,
-            options: Options::new(),
+            options: Default::default(),
             listener,
         }
     }
@@ -74,7 +71,7 @@ impl SailifyPlayer {
 
         info!("Starting player ...");
 
-        return match LibrespotThread::run(self.listener.clone(), self.options.clone()) {
+        match LibrespotThread::run(self.listener.clone(), self.options.clone()) {
             Ok(thread) => {
                 self.thread = Some(thread);
                 true
@@ -83,7 +80,7 @@ impl SailifyPlayer {
                 self.set_error(err);
                 false
             }
-        };
+        }
     }
 
     fn set_error(&mut self, err: LibrespotError) {

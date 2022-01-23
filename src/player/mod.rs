@@ -7,7 +7,6 @@ use std::thread::JoinHandle;
 use std::{env, panic};
 
 use futures::channel::mpsc::{unbounded, UnboundedSender};
-use futures::{FutureExt, TryFutureExt};
 use librespot_core::authentication::Credentials;
 use librespot_core::cache::Cache;
 use librespot_core::config::{ConnectConfig, DeviceType, SessionConfig};
@@ -17,7 +16,7 @@ use librespot_playback::config::{AudioFormat, Bitrate, PlayerConfig, VolumeCtrl}
 use librespot_playback::mixer::{self, MixerConfig};
 use log::{error, info, warn};
 use os_release::OsRelease;
-use tokio::runtime::{Builder, Runtime};
+use tokio::runtime::Builder;
 use uuid::Uuid;
 
 use crate::player::controller::{ControlMessage, LibrespotConfig, LibrespotController};
@@ -75,8 +74,8 @@ pub struct Options {
     pub cache_size_limit: Option<u64>,
 }
 
-impl Options {
-    pub fn new() -> Self {
+impl Default for Options {
+    fn default() -> Self {
         let hw_name = OsRelease::new_from("/etc/hw-release")
             .ok()
             .map(|hw| hw.name)
@@ -170,13 +169,15 @@ fn setup(opts: Options) -> LibrespotResult<LibrespotConfig> {
         ap_port: opts.ap_port,
     };
 
-    let mut player_config = PlayerConfig::default();
-    player_config.bitrate = opts.bitrate;
-    player_config.gapless = opts.gapless;
-    player_config.normalisation = opts.volume_normalisation;
-    player_config.normalisation_pregain = opts
-        .normalisation_pregain
-        .unwrap_or(PlayerConfig::default().normalisation_pregain);
+    let player_config = PlayerConfig {
+        bitrate: opts.bitrate,
+        gapless: opts.gapless,
+        normalisation: opts.volume_normalisation,
+        normalisation_pregain: opts
+            .normalisation_pregain
+            .unwrap_or(PlayerConfig::default().normalisation_pregain),
+        ..Default::default()
+    };
 
     let connect_config = ConnectConfig {
         name: opts.device_name,
@@ -233,7 +234,10 @@ impl LibrespotThread {
                 let listener_clone = listener.clone();
                 let result = panic::catch_unwind(move || {
                     info!("CORE START");
-                    let mut core = Builder::new_current_thread().build().unwrap();
+                    let core = Builder::new_current_thread()
+                        .thread_name("librespot-runtime")
+                        .build()
+                        .unwrap();
                     let (control_tx, control_rx) = x.into_inner().unwrap();
 
                     let controller_future = LibrespotController::run(
@@ -269,7 +273,11 @@ impl LibrespotThread {
     }
 
     pub fn shutdown(self) {
-        if let Err(_) = self.control.unbounded_send(ControlMessage::Shutdown) {
+        if self
+            .control
+            .unbounded_send(ControlMessage::Shutdown)
+            .is_err()
+        {
             warn!("Shutdown could not send because thread is already dead");
         } else {
             self.handle.join().unwrap();

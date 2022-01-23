@@ -92,8 +92,8 @@ impl<'a> ToInternal for SailifyStringView<'a> {
     }
 }
 
-fn string_to_ffi(s: &String) -> SailifyStringView {
-    SailifyStringView::from(s as &str)
+fn string_to_ffi(s: &str) -> SailifyStringView {
+    SailifyStringView::from(s)
 }
 
 // SailifyString

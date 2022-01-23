@@ -1,10 +1,9 @@
 use std::panic::{RefUnwindSafe, UnwindSafe};
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::Arc;
 
 use crate::player::error::LibrespotError;
 use librespot_core::keymaster::Token;
 use librespot_playback::player::PlayerEvent;
-use log::warn;
 
 #[derive(Debug)]
 pub enum LibrespotEvent {
