@@ -1,5 +1,6 @@
 import QtQuick 2.0
 import Sailfish.Silica 1.0
+import Sailify 0.1
 
 DockedPanel {
     id: panel
@@ -11,7 +12,7 @@ DockedPanel {
         PropertyAnimation { }
     }
 
-    open: !Qt.inputMethod.visible && librespot.playbackStatus !== "stopped"
+    open: !Qt.inputMethod.visible && librespot.playbackState !== SailifyPlayer.Stopped
 
     property int progressBarHeight: Theme.paddingSmall
 
@@ -86,11 +87,12 @@ DockedPanel {
                 bottom: albumArt.bottom
             }
 
-            icon.source: librespot.playbackStatus === "paused" ? "image://theme/icon-m-play"
-                                                               : "image://theme/icon-m-pause"
+            icon.source: librespot.playbackState === SailifyPlayer.Paused
+                         ? "image://theme/icon-m-play"
+                         : "image://theme/icon-m-pause"
 
             onClicked: {
-                if (librespot.playbackStatus === "playing") {
+                if (librespot.playbackState === SailifyPlayer.Playing) {
                     librespot.pause()
                 } else {
                     librespot.play()

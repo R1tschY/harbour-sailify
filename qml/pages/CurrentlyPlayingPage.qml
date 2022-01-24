@@ -1,6 +1,7 @@
 import QtQuick 2.0
 import Sailfish.Silica 1.0
 import "../components/api"
+import Sailify 0.1
 
 
 Page {
@@ -85,7 +86,7 @@ Page {
                                                   : "image://theme/icon-l-pause"
 
                     onClicked: {
-                        if (librespot.playbackStatus === "playing") {
+                        if (librespot.playbackState === SailifyPlayer.Playing) {
                             librespot.pause()
                         } else {
                             librespot.play()
