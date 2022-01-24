@@ -1,13 +1,13 @@
-use crate::player::error::LibrespotError;
+//! C bindings for SailifyPlayer
+
 use std::ffi::c_void;
 use std::marker::PhantomData;
 use std::os::raw::c_char;
 use std::sync::Arc;
 
-use crate::player::qobject::SailifyPlayer;
-use crate::player::qtgateway::{LibrespotEvent, LibrespotEventListener};
-
-// SailifyStringView
+use crate::player::error::LibrespotError;
+use crate::player::events::{LibrespotEvent, LibrespotEventListener};
+use crate::player::SailifyPlayer;
 
 #[repr(C)]
 #[derive(Clone)]

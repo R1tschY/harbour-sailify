@@ -16,7 +16,7 @@ use librespot_playback::player::{Player, PlayerEventChannel};
 use log::{error, info, warn};
 use tokio::runtime::Handle;
 
-use crate::player::qtgateway::{LibrespotEvent, LibrespotEventListener, LibrespotEventListenerRef};
+use crate::player::events::{LibrespotEvent, LibrespotEventListener, LibrespotEventListenerRef};
 use crate::player::{CLIENT_ID, SCOPES};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
