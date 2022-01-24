@@ -348,6 +348,7 @@ void SailifyPlayer::onTokenChanged(const QString& accessToken, quint32 expiresIn
         .shutdown = SailifyPlayerCallback::onShutdown,
         .start_reconnect = SailifyPlayerCallback::onStartReconnect,
         .token_changed = SailifyPlayerCallback::onTokenChanged,
+        .destroy = SailifyPlayerCallback::onDestroy,
     };
     return callback;
 }
