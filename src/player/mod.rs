@@ -1,44 +1,25 @@
-use std::fs;
-use std::io;
-use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
-use std::thread;
-use std::thread::JoinHandle;
-use std::{env, panic};
+use std::env;
 
-use futures::channel::mpsc::{unbounded, UnboundedSender};
-use librespot_core::authentication::Credentials;
-use librespot_core::cache::Cache;
-use librespot_core::config::{ConnectConfig, DeviceType, SessionConfig};
-use librespot_core::version;
-use librespot_playback::audio_backend;
-use librespot_playback::config::{AudioFormat, Bitrate, PlayerConfig, VolumeCtrl};
-use librespot_playback::mixer::{self, MixerConfig};
 use log::{error, info, warn};
-use os_release::OsRelease;
-use tokio::runtime::Builder;
-use uuid::Uuid;
 
 use options::Options;
 
-use crate::player::controller::{ControlMessage, LibrespotConfig, LibrespotController};
-use crate::player::error::{LibrespotError, LibrespotResult};
-use crate::player::events::{LibrespotEvent, LibrespotEventListener, LibrespotEventListenerRef};
+use crate::player::error::LibrespotError;
+use crate::player::events::{LibrespotEvent, LibrespotEventListenerRef};
 use crate::player::runtime::PlayerRuntime;
-use crate::utils::xdg;
 
 mod bindings;
-pub mod controller;
+mod controller;
 pub mod error;
-pub mod events;
-pub mod options;
-pub mod runtime;
+mod events;
+mod options;
+mod runtime;
 
 /// cbindgen:ignore
-pub const CLIENT_ID: &str = env!("SAILIFY_CLIENT_ID");
+pub(crate) const CLIENT_ID: &str = env!("SAILIFY_CLIENT_ID");
 
 /// cbindgen:ignore
-pub const SCOPES: &str = "user-read-private,\
+pub(crate) const SCOPES: &str = "user-read-private,\
 playlist-read-private,\
 playlist-read-collaborative,\
 user-library-read,\
