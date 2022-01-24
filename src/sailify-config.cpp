@@ -12,6 +12,6 @@ QString PACKAGE_NAME =
         QStringLiteral("harbour-sailify");
 
 QString PRETTY_PACKAGE_NAME =
-        QStringLiteral("Sailifyt");
+        QStringLiteral("Sailify");
 
 } // namespace SailfishConnect
