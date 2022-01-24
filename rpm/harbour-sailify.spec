@@ -98,6 +98,7 @@ export CXX=g++
 export AR="gcc-ar"
 export NM="gcc-nm"
 export RANLIB="gcc-ranlib"
+export PKG_CONFIG="pkg-config"
 
 export CARGO_BUILD_TARGET=$SB2_TARGET
 
