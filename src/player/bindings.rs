@@ -1,5 +1,6 @@
 //! C bindings for SailifyPlayer
 
+use std::env;
 use std::ffi::c_void;
 use std::marker::PhantomData;
 use std::os::raw::c_char;
@@ -119,6 +120,18 @@ impl<'a> IntoFfi for Option<String> {
             None => std::ptr::null_mut(),
         }
     }
+}
+
+// General
+
+#[no_mangle]
+pub extern "C" fn sailify_init() {
+    let rust_log = env::var("RUST_LOG")
+        .unwrap_or_else(|_| "libmdns=info,librespot=info,sailify=debug".to_string());
+
+    let _ = env_logger::Builder::new()
+        .parse_filters(&rust_log)
+        .try_init();
 }
 
 #[no_mangle]

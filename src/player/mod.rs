@@ -88,19 +88,9 @@ pub struct SailifyPlayer {
     listener: LibrespotEventListenerRef,
 }
 
-fn setup_logging() {
-    let rust_log = env::var("RUST_LOG")
-        .unwrap_or_else(|_| "libmdns=info,librespot=info,sailify=debug".to_string());
-
-    let _ = env_logger::Builder::new()
-        .parse_filters(&rust_log)
-        .try_init();
-}
-
 impl SailifyPlayer {
     #[must_use]
     pub fn new(listener: LibrespotEventListenerRef) -> Self {
-        setup_logging();
         Self {
             thread: None,
             options: Options::default(),

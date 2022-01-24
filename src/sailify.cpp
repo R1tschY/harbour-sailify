@@ -25,6 +25,8 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+    sailify_init();
+
     qmlRegisterType<Sailify::SailifyPlayer>("Sailify", 0, 1, "SailifyPlayer");
     qRegisterMetaType<SailifyErrorKind>();
 
