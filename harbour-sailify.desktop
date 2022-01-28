@@ -4,3 +4,8 @@ X-Nemo-Application-Type=silica-qt5
 Icon=harbour-sailify
 Exec=harbour-sailify
 Name=Sailify
+
+[X-Sailjail]
+Permissions=Internet;Audio
+OrganizationName=de.richardliebscher
+ApplicationName=sailify
