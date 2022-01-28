@@ -1,1 +1,1 @@
-pub mod xdg;
+pub mod xdg_base_dirs;

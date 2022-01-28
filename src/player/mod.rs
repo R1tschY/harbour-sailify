@@ -74,7 +74,7 @@ impl SailifyPlayer {
     pub fn new(listener: LibrespotEventListenerRef) -> Self {
         Self {
             thread: None,
-            options: Options::default(),
+            options: Options::read_from_fs(),
             listener,
         }
     }

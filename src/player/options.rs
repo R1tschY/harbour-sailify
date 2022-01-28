@@ -1,11 +1,12 @@
 use std::fs;
 use std::path::PathBuf;
 
+use crate::{APPLICATION_NAME, ORGANIZATION_NAME};
 use librespot_playback::config::{AudioFormat, Bitrate, VolumeCtrl};
 use os_release::OsRelease;
 use uuid::Uuid;
 
-use crate::utils::xdg;
+use crate::utils::xdg_base_dirs;
 
 #[derive(Clone)]
 pub struct Options {
@@ -34,28 +35,32 @@ pub struct Options {
     pub cache_size_limit: Option<u64>,
 }
 
-impl Default for Options {
-    fn default() -> Self {
+impl Options {
+    pub fn read_from_fs() -> Self {
         let hw_name = OsRelease::new_from("/etc/hw-release")
-            .ok()
-            .map_or_else(|| "Sailfish OS".to_string(), |hw| hw.name);
-        let cache_dir = xdg::config_home().join("harbour-sailify").join("librespot");
+            .map_or_else(|_| "Sailfish OS".to_string(), |hw| hw.name);
+        let config_dir = xdg_base_dirs::config_home()
+            .join(ORGANIZATION_NAME)
+            .join(APPLICATION_NAME);
+        let cache_dir = xdg_base_dirs::cache_home()
+            .join(ORGANIZATION_NAME)
+            .join(APPLICATION_NAME);
 
-        let device_id_path = cache_dir.join("device_id");
+        let device_id_path = config_dir.join("device_id");
         let device_id = if let Ok(device_id) = fs::read_to_string(&device_id_path) {
             device_id
         } else {
             let mut buffer = Uuid::encode_buffer();
             let device_id = Uuid::new_v4().to_simple().encode_lower(&mut buffer);
 
-            fs::create_dir_all(&cache_dir).unwrap();
+            fs::create_dir_all(&config_dir).unwrap();
             fs::write(&device_id_path, &device_id).unwrap();
             (*device_id).to_string()
         };
 
         Self {
             audio_cache: Some(cache_dir.join("files")),
-            system_cache: Some(cache_dir),
+            system_cache: Some(config_dir),
             device_name: hw_name,
             device_id,
             bitrate: Bitrate::default(),
