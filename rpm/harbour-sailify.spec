@@ -108,7 +108,12 @@ export CARGO_BUILD_TARGET=$SB2_TARGET
 export CARGO_PROFILE_RELEASE_LTO=fat
 export RUSTFLAGS="-Clink-arg=-Wl,-z,relro,-z,now -Ccodegen-units=1 %{?rustflags}"
 export CARGO_INCREMENTAL=0
-cargo build --release -j1 --target-dir=%BUILD_DIR --manifest-path %{_sourcedir}/../Cargo.toml
+
+if [ "$SAILFISH_SDK_FRONTEND" == "qtcreator" ] ; then
+  cargo build --release -j1 --target-dir=$PWD --manifest-path %{_sourcedir}/../Cargo.toml
+else
+  cargo build --release -j1 --target-dir=%BUILD_DIR --manifest-path %{_sourcedir}/../Cargo.toml
+fi
 
 #
 # CMake
@@ -130,12 +135,14 @@ fi
 
 if [ "$SAILFISH_SDK_FRONTEND" == "qtcreator" ] ; then
     cmake \
+      -GNinja \
       -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE \
       -DBUILD_SHARED_LIBS=OFF \
       -DCMAKE_INSTALL_PREFIX=/usr \
       -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+      -DRUST_TARGET_DIR=${SB2_TARGET}/release \
       -DSAILFISHOS=ON
-    cmake --build "$PWD" -- %{?_smp_mflags}
+    cmake --build . -- %{?_smp_mflags}
 else
     cmake \
       -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE \

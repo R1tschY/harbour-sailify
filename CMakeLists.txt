@@ -62,8 +62,12 @@ else()
   set(TARGET_DIR "release")
 endif()
 
+if (NOT DEFINED RUST_TARGET_DIR)
+  set(RUST_TARGET_DIR "${CMAKE_CURRENT_BINARY_DIR}")
+endif()
+
 add_library(sailifyplayer STATIC IMPORTED)
-set_property(TARGET sailifyplayer PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/libsailifyplayer.a")
+set_property(TARGET sailifyplayer PROPERTY IMPORTED_LOCATION "${RUST_TARGET_DIR}/libsailifyplayer.a")
 target_link_libraries(sailifyplayer INTERFACE
     -lpthread -ldl -lm
     ${PULSE_LDFLAGS} ${PULSE_SIMPLE_LDFLAGS})
