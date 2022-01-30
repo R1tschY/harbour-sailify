@@ -128,15 +128,8 @@ else
 fi
 
 if [ "$SAILFISH_SDK_FRONTEND" == "qtcreator" ] ; then
-  CMAKE_BUILD_TYPE="Debug"
-else
-  CMAKE_BUILD_TYPE="RelWithDebInfo"
-fi
-
-if [ "$SAILFISH_SDK_FRONTEND" == "qtcreator" ] ; then
     cmake \
       -GNinja \
-      -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE \
       -DBUILD_SHARED_LIBS=OFF \
       -DCMAKE_INSTALL_PREFIX=/usr \
       -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
@@ -145,7 +138,7 @@ if [ "$SAILFISH_SDK_FRONTEND" == "qtcreator" ] ; then
     cmake --build . -- %{?_smp_mflags}
 else
     cmake \
-      -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE \
+      -DCMAKE_BUILD_TYPE=RelWithDebInfo \
       -DBUILD_SHARED_LIBS=OFF \
       -DCMAKE_INSTALL_PREFIX=/usr \
       -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
@@ -176,9 +169,15 @@ case "$DEB_BUILD_ARCH_CPU" in
         exit 1
         ;;
 esac
-CMAKE_BUILD_DIR="%{BUILD_DIR}/${SB2_TARGET}/release"
+
+if [ "$SAILFISH_SDK_FRONTEND" == "qtcreator" ] ; then
+    CMAKE_BUILD_DIR=.
+else
+    CMAKE_BUILD_DIR="%{BUILD_DIR}/${SB2_TARGET}/release"
+fi
 
 rm -rf %{buildroot}
+
 DESTDIR=%{buildroot} cmake --build "$CMAKE_BUILD_DIR" --target install
 
 desktop-file-install --delete-original       \
