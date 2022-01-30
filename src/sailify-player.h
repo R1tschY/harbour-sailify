@@ -44,8 +44,6 @@ public:
         Disconnected = 0,
         Connecting = 1,
         Connected = 2,
-
-        Crashed = 100,
     };
     Q_ENUM(ConnectionStatus)
 

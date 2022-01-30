@@ -298,9 +298,7 @@ void SailifyPlayer::onError(SailifyErrorKind kind, const QString& message) {
         case SailifyErrorKind::IllegalConfig: return setError(IllegalConfig, message);
         case SailifyErrorKind::Io: return setError(IoError, message);
         case SailifyErrorKind::Connection: return setError(ConnectionError, message);
-        case SailifyErrorKind::Panic:
-            setConnectionStatus(Crashed);
-            return setError(Panic, message);
+        case SailifyErrorKind::Panic: return setError(Panic, message);
         case SailifyErrorKind::Token:
             qCCritical(logger) << "Access token refresh error:" << message;
             return emit accessTokenRefreshFailed(message);
@@ -311,6 +309,7 @@ void SailifyPlayer::setError(ErrorKind kind, const QString& message) {
     qCCritical(logger) << "Player error:" << message;
     m_errorString = message;
     m_errorKind = kind;
+    setConnectionStatus(Disconnected);
     emit errorOccurred(kind, message);
 }
 
