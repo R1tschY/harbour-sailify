@@ -131,4 +131,14 @@ ListModel {
         }
         fetchFirst("search", params)
     }
+
+    function fillLocalData(data) {
+        reset()
+
+        total = data.length
+        _nextOffset = total
+        for (var i = 0; i < data.length; i++) {
+            model.append(data[i])
+        }
+    }
 }

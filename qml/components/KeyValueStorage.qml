@@ -59,14 +59,14 @@ QtObject {
         _db.transaction(function (tx) {
             var results
             if (limit) {
-                results = tx.executeSql('SELECT value FROM events WHERE key = ? ORDER BY timestamp', [type])
+                results = tx.executeSql('SELECT value FROM events WHERE type = ? ORDER BY timestamp', [type])
             } else {
-                results = tx.executeSql('SELECT value FROM events WHERE key = ? ORDER BY timestamp LIMIT ?', [type, limit])
+                results = tx.executeSql('SELECT value FROM events WHERE type = ? ORDER BY timestamp LIMIT ?', [type, limit])
             }
 
             var length = results.rows.length
             for (var i = 0; i < length; i++) {
-                res.push(JSON.parse(results.rows.item(0)))
+                res.push(JSON.parse(results.rows.item(0).value))
             }
         })
         return res

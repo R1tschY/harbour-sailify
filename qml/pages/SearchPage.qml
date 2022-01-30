@@ -5,8 +5,6 @@ import "../components"
 Page {
     id: page
 
-    property bool searched: false
-
     property string searchType: "artist"
 
     function typeToHeading(type) {
@@ -21,7 +19,7 @@ Page {
     PageListView {
         id: listView
 
-        placeholder: searched ? qsTr("Nothing found") : ""
+        placeholder: qsTr("Nothing found")
 
         header: Column {
             width: page.width
@@ -40,12 +38,16 @@ Page {
                 EnterKey.iconSource: "image://theme/icon-m-search"
 
                 EnterKey.onClicked: search()
-                Component.onCompleted: searchField.forceActiveFocus()
+                Component.onCompleted: {
+                    listView.model.fillLocalData(
+                        keyValueStorage.getEvents("clickSearchResult", 25))
+                    searchField.forceActiveFocus()
+                }
                 onTextChanged: searchDebounceTimer.start()
 
                 Timer {
                     id: searchDebounceTimer
-                    interval: 1000
+                    interval: 1500
                     repeat: false
 
                     onTriggered: searchField.search()
@@ -55,7 +57,8 @@ Page {
                     if (text) {
                         listView.model.search(text, [searchType])
                     } else {
-                        listView.model.reset()
+                        listView.model.fillLocalData(
+                            keyValueStorage.getEvents("clickSearchResult", 25))
                     }
                     searchField.forceActiveFocus()
                 }
@@ -67,7 +70,7 @@ Page {
 
             name_: name
             images_: images
-            fallbackIcon: "image://theme/icon-m-media-albums"
+            fallbackIcon: "image://theme/icon-m-media-albums" // TODO
 
             onClicked: {
                 switch (type) {
@@ -105,7 +108,8 @@ Page {
                         break;
                 }
 
-                keyValueStorage.pushEvent("searchResult", uri)
+                keyValueStorage.pushEvent(
+                    "clickSearchResult", listView.model.get(index))
             }
         }
 
