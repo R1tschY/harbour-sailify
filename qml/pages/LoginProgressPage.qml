@@ -60,7 +60,7 @@ Page {
         if (librespot.errorKind === SailifyPlayer.MissingCredentials) {
             pageStack.replace(Qt.resolvedUrl("LoginPage.qml"), {}, PageStackAction.Immediate)
         } else {
-            pageStack.replace(Qt.resolvedUrl("LoginErrorPage.qml"), {}, PageStackAction.Immediate)
+            pageStack.replace(Qt.resolvedUrl("LoginErrorPage.qml"), { allowLogout: false }, PageStackAction.Immediate)
         }
     }
 

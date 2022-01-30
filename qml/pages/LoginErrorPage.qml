@@ -4,6 +4,8 @@ import Sailfish.Silica 1.0
 Page {
     id: page
 
+    property bool allowLogout: true
+
     SilicaFlickable {
         id: flickable
 
@@ -31,7 +33,7 @@ Page {
                 text: librespot.errorString || qsTr("Unknown error")
 
                 color: Theme.secondaryHighlightColor
-                wrapMode: Text.WordWrap
+                wrapMode: Text.Wrap
             }
 
             Button {
@@ -44,12 +46,14 @@ Page {
             }
         }
 
-        PullDownMenu {
+        PullDownMenu {           
+            active: allowLogout
+
             MenuItem {
+                id: logout
                 text: qsTr("Logout")
                 onClicked: app.logout()
-                visible: pageStack.depth === 1
-                         || pageStack.previousPage().objectName !== "LoginPage"
+                visible: allowLogout
             }
         }
 
