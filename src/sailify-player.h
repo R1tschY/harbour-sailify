@@ -103,15 +103,15 @@ public slots:
     void updatePosition();
 
 signals:
-    void activeChanged();
+    void activeChanged(bool active);
     void errorOccurred(ErrorKind kind, const QString& message);
-    void mediaStatusChanged();
-    void connectionStatusChanged();
-    void trackUriChanged();
-    void playbackStateChanged();
-    void positionChanged();
-    void durationChanged();
-    void accessTokenChanged();
+    void mediaStatusChanged(MediaStatus mediaStatus);
+    void connectionStatusChanged(ConnectionStatus connectionStatus);
+    void trackUriChanged(const QString& trackUri);
+    void playbackStateChanged(PlaybackState playbackState);
+    void positionChanged(qint32 position);
+    void durationChanged(qint32 duration);
+    void accessTokenChanged(const QString& accessToken);
     void accessTokenRefreshFailed(const QString& message);
 
 private:

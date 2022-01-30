@@ -211,19 +211,19 @@ void SailifyPlayer::setPlayerStatus(
     }
 
     if (changedMediaStatus) {
-        emit mediaStatusChanged();
+        emit mediaStatusChanged(m_mediaStatus);
     }
     if (changedPlaybackState) {
-        emit playbackStateChanged();
+        emit playbackStateChanged(m_playbackState);
     }
     if (changedTrackId) {
-        emit trackUriChanged();
+        emit trackUriChanged(m_trackId);
     }
     if (changedPositionMs) {
-        emit positionChanged();
+        emit positionChanged(m_positionMs);
     }
     if (changedDurationMs) {
-        emit durationChanged();
+        emit durationChanged(m_durationMs);
     }
 }
 
@@ -238,7 +238,7 @@ void SailifyPlayer::onChanged(const QString& newTrackId) {
 
     if (newTrackId != m_trackId) {
         m_trackId = newTrackId;
-        emit trackUriChanged();
+        emit trackUriChanged(m_trackId);
     }
 }
 
@@ -278,7 +278,7 @@ void SailifyPlayer::setConnectionStatus(ConnectionStatus value) {
     if (m_connectionStatus != value) {
         qCDebug(logger) << "Connection status changed:" << value;
         m_connectionStatus = value;
-        emit connectionStatusChanged();
+        emit connectionStatusChanged(m_connectionStatus);
     }
 }
 
@@ -329,7 +329,7 @@ void SailifyPlayer::onTokenChanged(const QString& accessToken, quint32 expiresIn
 
     m_accessToken = accessToken;
     m_accessTokenExpiresAt = QDateTime::currentMSecsSinceEpoch() + expiresIn;
-    emit accessTokenChanged();
+    emit accessTokenChanged(m_accessToken);
 }
 
 ::SailifyCallback SailifyPlayerCallback::createFfiCallback() {

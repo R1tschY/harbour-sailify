@@ -36,8 +36,8 @@ Object {
     Connections {
         target: librespot
         onTrackUriChanged: {
-            if (value) {
-                request.getTrack(parseSpotifyId(value)[2])
+            if (trackUri) {
+                request.getTrack(parseSpotifyId(trackUri)[2])
             } else {
                 uri = ""
                 name = "Not playing"
