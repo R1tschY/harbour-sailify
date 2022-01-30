@@ -4,6 +4,7 @@
 #include <QString>
 #include <QString>
 #include <QTimer>
+#include <QElapsedTimer>
 
 #include <sailifyplayer.h>
 
@@ -114,7 +115,6 @@ signals:
 
 private:
     ::SailifyPlayer* m_player = nullptr;
-    QTimer m_positionTimer;
 
     QString m_accessToken;
     qint64 m_accessTokenExpiresAt = -1;
@@ -128,8 +128,9 @@ private:
 
     QString m_trackId;
 
+    QTimer m_positionTimer;
+    QElapsedTimer m_positionElapsedTimer;
     qint32 m_positionMs = 0;
-    qint64 m_positionTimestamp = -1;
     qint32 m_durationMs = 0;
 
     quint16 m_volume = 0;

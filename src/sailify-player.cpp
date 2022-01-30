@@ -26,6 +26,12 @@ SailifyPlayer::SailifyPlayer() {
     m_player = ::sailify_player_new(&ffiCallback);
 
     m_positionTimer.setInterval(1000);
+    connect(
+        &m_positionTimer, &QTimer::timeout,
+        this, [this]() {
+            emit positionChanged(
+                    m_positionMs + m_positionElapsedTimer.elapsed());
+        });
 
     connect(
         callback, &SailifyPlayerCallback::stopped,
@@ -120,7 +126,11 @@ SailifyPlayer::PlaybackState SailifyPlayer::playbackState() const {
 }
 
 qint32 SailifyPlayer::position() const {
-    return m_positionMs;
+    if (m_positionElapsedTimer.isValid()) {
+        return m_positionMs + m_positionElapsedTimer.elapsed();
+    } else {
+        return m_positionMs;
+    }
 }
 
 qint32 SailifyPlayer::duration() const {
@@ -203,10 +213,10 @@ void SailifyPlayer::setPlayerStatus(
     m_playbackState = playbackState;
 
     if (m_playbackState == Playing && m_positionMs >= 0) {
-        m_positionTimestamp = QDateTime::currentMSecsSinceEpoch();
+        m_positionElapsedTimer.restart();
         m_positionTimer.start();
     } else {
-        m_positionTimestamp = -1;
+        m_positionElapsedTimer.invalidate();
         m_positionTimer.stop();
     }
 
