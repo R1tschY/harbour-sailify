@@ -19,10 +19,10 @@ Object {
         canPlay: true
 
         playbackStatus: {
-            switch (librespot.playbackStatus) {
-            case "playing": return Mpris.Playing
-            case "paused": return Mpris.Paused
-            case "stopped": return Mpris.Stopped
+            switch (librespot.playbackState) {
+            case SailifyPlayer.Playing: return Mpris.Playing
+            case SailifyPlayer.Paused: return Mpris.Paused
+            case SailifyPlayer.Stopped: return Mpris.Stopped
             default: return Mpris.InvalidPlaybackStatus
             }
         }
@@ -30,7 +30,7 @@ Object {
         onPauseRequested: librespot.pause()
         onPlayRequested: librespot.play()
         onPlayPauseRequested: {
-            if (librespot.playbackStatus === "playing") {
+            if (librespot.playbackState === SailifyPlayer.Playing) {
                 librespot.pause()
             } else {
                 librespot.play()

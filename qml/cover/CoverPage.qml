@@ -1,8 +1,9 @@
 import QtQuick 2.0
 import Sailfish.Silica 1.0
+import Sailify 0.1
 
 CoverBackground {
-    property bool active: librespot.playbackStatus !== "stopped" && !!playingMetadata.albumImage
+    property bool active: librespot.playbackState !== SailifyPlayer.Stopped && !!playingMetadata.albumImage
 
     Item {
         visible: active
@@ -36,11 +37,11 @@ CoverBackground {
         iconBackground: true
 
         CoverAction {
-            iconSource: librespot.playbackStatus === "playing"
+            iconSource: librespot.playbackState === SailifyPlayer.Playing
                         ? "image://theme/icon-cover-pause"
                         : "image://theme/icon-cover-play"
             onTriggered: {
-                if (librespot.playbackStatus === "playing") {
+                if (librespot.playbackState === SailifyPlayer.Playing) {
                     librespot.pause()
                 } else {
                     librespot.play()
