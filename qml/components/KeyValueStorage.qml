@@ -26,7 +26,7 @@ QtObject {
         _db.transaction(function (tx) {
             var results = tx.executeSql('SELECT value FROM kv WHERE key = ?', [key])
             if (results.rows.length > 0) {
-                res = JSON.parse(results.rows.item(0))
+                res = JSON.parse(results.rows.item(0).value)
             }
         })
         return res
@@ -48,7 +48,7 @@ QtObject {
 
     function clear() {
         _db.transaction(function (tx) {
-            tx.executeSql('DELETE FROM kv; VACUUM', [key])
+            tx.executeSql('DELETE FROM kv')
         })
     }
 
@@ -83,7 +83,7 @@ QtObject {
 
     function clearEvents() {
         _db.transaction(function (tx) {
-            tx.executeSql('DELETE FROM events; VACUUM')
+            tx.executeSql('DELETE FROM events')
         })
     }
 }
