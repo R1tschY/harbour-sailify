@@ -65,6 +65,8 @@ Page {
             }
         }
 
+        properties: ["name", "images", "type", "id"]
+
         delegate: ResultListItem {
             id: itemItem
 

@@ -14,6 +14,8 @@ Page {
             title: qsTr("Playlists")
         }
 
+        properties: ["name", "images"]
+
         delegate: ResultListItem {
             id: itemItem
 

@@ -57,6 +57,8 @@ Page {
             }
         }
 
+        properties: ["name", "track_number", "artists", "duration_ms", "uri"]
+
         delegate: AlbumTrackListItem {
             id: itemItem
             // TODO: explicit

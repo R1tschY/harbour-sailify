@@ -7,6 +7,7 @@ SilicaListView {
     property alias placeholder: viewPlaceholder.text
     property alias fetchBatchSize: listModel.limit
     property alias dataDelegate: listModel.dataDelegate
+    property alias properties: listModel.properties
 
     property bool _complete: false
 

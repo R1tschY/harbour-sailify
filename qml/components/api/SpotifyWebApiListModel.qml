@@ -1,6 +1,7 @@
 import QtQuick 2.0
+import Qommons.Models 0.1
 
-ListModel {
+JsonListModel {
     id: model
 
     property alias accessToken: request.accessToken
@@ -44,12 +45,8 @@ ListModel {
             model.total = data.total
             model._nextOffset = data.offset + data.limit
 
-            for (var i = 0; i < items.length; i++) {
-                var item = items[i]
-                if (item.is_playable !== false) {
-                    model.append(items[i])
-                }
-            }
+            model.extend(JSON.stringify(
+                items.filter(function(item) { return item.is_playable !== false })))
         }
     }
 
@@ -137,8 +134,6 @@ ListModel {
 
         total = data.length
         _nextOffset = total
-        for (var i = 0; i < data.length; i++) {
-            model.append(data[i])
-        }
+        model.extend(JSON.stringify(data))
     }
 }

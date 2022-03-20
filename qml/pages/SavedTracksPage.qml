@@ -14,6 +14,8 @@ Page {
             title: qsTr("Saved tracks")
         }
 
+        properties: ["track"]
+
         delegate: ResultListItem {
             id: itemItem
 

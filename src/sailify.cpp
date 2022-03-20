@@ -8,6 +8,7 @@
 
 #include "sailify-config.h"
 #include "sailify-player.h"
+#include "common/jsonlistmodel.h"
 
 static Q_LOGGING_CATEGORY(logger, "sailify.app")
 
@@ -29,6 +30,8 @@ int main(int argc, char *argv[]) {
 
     qmlRegisterType<Sailify::SailifyPlayer>("Sailify", 0, 1, "SailifyPlayer");
     qRegisterMetaType<SailifyErrorKind>();
+
+    JsonListModel::registerQmlType();
 
     QQuickView* view = SailfishApp::createView();
     view->setSource(SailfishApp::pathToMainQml());

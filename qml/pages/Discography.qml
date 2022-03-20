@@ -22,6 +22,8 @@ Page {
             title: name
         }
 
+        properties: ["name", "images", "id", "uri"]
+
         delegate: ResultListItem {
             id: itemItem
 
