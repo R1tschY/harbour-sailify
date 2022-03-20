@@ -1,5 +1,7 @@
 import QtQuick 2.0
 import org.nemomobile.mpris 1.0
+import Sailify 0.1
+// TODO: import Amber.Mpris 1.0
 
 Object {
     MprisPlayer {
