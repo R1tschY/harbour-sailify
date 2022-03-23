@@ -66,7 +66,7 @@ QtObject {
 
             var length = results.rows.length
             for (var i = 0; i < length; i++) {
-                res.push(JSON.parse(results.rows.item(0).value))
+                res.push(JSON.parse(results.rows.item(i).value))
             }
         })
         return res
