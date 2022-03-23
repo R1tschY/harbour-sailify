@@ -190,11 +190,13 @@ void JsonListModel::extend(const QString &values)
     if (!doc.isNull()) {
         QVector<QJsonObject> newValues = toJsonArray(doc);
 
-        beginInsertRows(
-            QModelIndex(), m_values.size(), m_values.size() + newValues.size());
-        m_values.append(newValues);
-        emit valuesChanged();
-        endInsertRows();
+        if (!newValues.isEmpty()) {
+            beginInsertRows(
+                QModelIndex(), m_values.size(), m_values.size() + newValues.size() - 1);
+            m_values.append(newValues);
+            emit valuesChanged();
+            endInsertRows();
+        }
     }
 }
 
