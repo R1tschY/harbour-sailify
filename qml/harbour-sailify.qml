@@ -8,7 +8,7 @@ ApplicationWindow
 {
     id: app
 
-    bottomMargin: playingPanel.parent === contentItem
+    bottomMargin: playingPanel.parent == contentItem
                   ? 0 : playingPanel.visibleSize
 
     readonly property bool darkMode: Theme.colorScheme === Theme.LightOnDark
@@ -32,6 +32,11 @@ ApplicationWindow
     KeyValueStorage {
         id: keyValueStorage
         dataBaseId: "configuration"
+    }
+
+    LastSearchResultsRepo {
+        id: lastSearchResultsRepo
+        dataBaseId: "qmlStorage"
     }
 
     HttpCache {

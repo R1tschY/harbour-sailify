@@ -38,12 +38,19 @@ Page {
                 EnterKey.iconSource: "image://theme/icon-m-search"
 
                 EnterKey.onClicked: search()
+
                 Component.onCompleted: {
-                    listView.model.fillLocalData(
-                        keyValueStorage.getEvents("clickSearchResult", 25))
+                    listView.model.fillLocalData(lastSearchResultsRepo.get())
                     searchField.forceActiveFocus()
                 }
-                onTextChanged: searchDebounceTimer.start()
+
+                onTextChanged: {
+                    if (text) {
+                        searchDebounceTimer.start()
+                    } else {
+                        search()
+                    }
+                }
 
                 Timer {
                     id: searchDebounceTimer
@@ -57,8 +64,7 @@ Page {
                     if (text) {
                         listView.model.search(text, [searchType])
                     } else {
-                        listView.model.fillLocalData(
-                            keyValueStorage.getEvents("clickSearchResult", 25))
+                        listView.model.fillLocalData(lastSearchResultsRepo.get())
                     }
                     searchField.forceActiveFocus()
                 }
@@ -75,18 +81,20 @@ Page {
             fallbackIcon: "image://theme/icon-m-media-albums" // TODO
 
             onClicked: {
+                var data = listView.model.get(index)
+
                 switch (type) {
                     case "artist":
                         pageStack.push(Qt.resolvedUrl("ArtistPage.qml"), {
                             "artistId": id,
-                            "artist": listView.model.get(index)
+                            "artist": data
                         })
                         break;
 
                     case "album":
                         pageStack.push(Qt.resolvedUrl("AlbumPage.qml"), {
                             "albumId": id,
-                            "album": listView.model.get(index)
+                            "album": data
                         })
                         break;
 
@@ -101,7 +109,7 @@ Page {
                     case "playlist":
                         pageStack.push(Qt.resolvedUrl("PlaylistPage.qml"), {
                             "playlistId": id,
-                            "playlist": listView.model.get(index)
+                            "playlist": data
                         })
                         break;
                         
@@ -110,8 +118,7 @@ Page {
                         break;
                 }
 
-                keyValueStorage.pushEvent(
-                    "clickSearchResult", listView.model.get(index))
+                lastSearchResultsRepo.put(data.uri, new Date().getTime(), data)
             }
         }
 
